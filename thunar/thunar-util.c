@@ -625,6 +625,10 @@ thunar_util_time_from_rfc3339 (const gchar *date_string)
   struct tm tm;
 
 #ifdef HAVE_STRPTIME
+  /* be sure to start with a clean tm */
+  memset (&tm, 0, sizeof (tm));
+  tm.tm_isdst = -1;
+
   /* using strptime() its easy to parse the date string */
   if (G_UNLIKELY (strptime (date_string, "%FT%T", &tm) == NULL))
     return 0;
