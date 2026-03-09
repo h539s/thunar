@@ -59,6 +59,10 @@
 #include "thunar/thunar-util.h"
 #include "thunar/thunar-window.h"
 
+#ifdef THUNAR_TEST_SCREENSHOT
+#include "thunar/thunar-test-utils.h"
+#endif
+
 #include <gdk/gdkkeysyms.h>
 #include <glib.h>
 #include <libxfce4ui/libxfce4ui.h>
@@ -1303,6 +1307,10 @@ thunar_window_init (ThunarWindow *window)
   thunar_statusbar_setup_event (THUNAR_STATUSBAR (window->statusbar), event_box);
   if (G_LIKELY (window->view != NULL))
     thunar_window_create_view_binding (window, THUNAR_STANDARD_VIEW (window->view), "statusbar-text", window->statusbar, "text", G_BINDING_SYNC_CREATE);
+
+#ifdef THUNAR_TEST_SCREENSHOT
+  g_idle_add (thunar_test_run, window);
+#endif
 
   /* load the bookmarks file and monitor */
   window->bookmarks = NULL;
