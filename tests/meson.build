@@ -19,3 +19,25 @@ foreach bin : test_bins
 
   test(bin, e)
 endforeach
+
+test_text_renderer = executable(
+  'test-text-renderer',
+  sources: [
+    'test-text-renderer.c',
+    'thunar-snapshot.c',
+  ],
+  c_args: thunar_c_args + ['-UG_DISABLE_ASSERT'],
+  include_directories: [
+    include_directories('..'),
+  ],
+  dependencies: thunar_dependencies,
+  link_with: [ libthunar, libthunarx ],
+  install: false,
+)
+
+test('test-text-renderer', test_text_renderer,
+     env: [
+       'G_TEST_SRCDIR=' + meson.current_source_dir(),
+       'G_TEST_BUILDDIR=' + meson.current_build_dir(),
+     ],
+)
