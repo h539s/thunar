@@ -170,10 +170,6 @@ thunar_sources = [
   'thunar-window.h',
 ]
 
-if get_option('test-screenshot')
-  thunar_sources += ['thunar-test-utils.c', 'thunar-test-utils.h']
-endif
-
 # Add terminal widget sources conditionally
 if vte.found()
   thunar_sources += ['thunar-terminal-widget.c', 'thunar-terminal-widget.h']
@@ -227,10 +223,6 @@ thunar_c_args = [
     '-DG_LOG_DOMAIN="@0@"'.format('thunar'),
     '-D_XOPEN_SOURCE=700', # for strptime in time.h
 ]
-
-if get_option('test-screenshot')
-  thunar_c_args += '-DTHUNAR_TEST_SCREENSHOT'
-endif
 
 libthunar = static_library(
   'thunar',
