@@ -1,5 +1,6 @@
 
 #include "thunar/thunar-test-utils.h"
+#include "thunar/thunar-preferences.h"
 #include <gdk/gdk.h>
 #include <gdk/gdktestutils.h>
 #include <glib.h>
@@ -137,7 +138,7 @@ find_file_menu_and_click (GtkWidget *widget, gpointer data)
   if (GTK_IS_MENU_ITEM (widget))
     {
       const gchar *label = gtk_menu_item_get_label (GTK_MENU_ITEM (widget));
-         We can also check the action name if available. */
+      /* We can also check the action name if available. */
       if (label && (strstr (label, "File") || strstr (label, "Arquivo")))
         {
           *file_menu_item = widget;
@@ -164,6 +165,10 @@ thunar_test_run (gpointer data)
   if (gtk_widget_get_window (GTK_WIDGET (window)) == NULL)
     return TRUE;
 
+  gtk_window_unmaximize (window);
+  gtk_window_resize (window, 800, 600);
+  gtk_window_move (window, 0, 0);
+
   if (g_strcmp0 (test_case, "open") == 0)
     {
       take_screenshot_and_compare (window, "open");
@@ -172,31 +177,35 @@ thunar_test_run (gpointer data)
   else if (g_strcmp0 (test_case, "file_menu") == 0)
     {
       GtkWidget *file_menu_item = NULL;
+      GtkWidget *titlebar;
+
+      /* Standardize the view: ensure the menubar is visible */
+      g_object_set (thunar_preferences_get (), "last-menubar-visible", TRUE, NULL);
+
       gtk_container_foreach (GTK_CONTAINER (window), find_file_menu_and_click, &file_menu_item);
+
+      if (file_menu_item == NULL)
+        {
+          titlebar = gtk_window_get_titlebar (window);
+          if (titlebar)
+            gtk_container_foreach (GTK_CONTAINER (titlebar), find_file_menu_and_click, &file_menu_item);
+        }
 
       if (file_menu_item)
         {
-          GtkAllocation alloc;
-          gint x, y;
-          gtk_widget_get_allocation (file_menu_item, &alloc);
-          gdk_window_get_origin (gtk_widget_get_window (file_menu_item), &x, &y);
+          GtkWidget *menubar = gtk_widget_get_parent (file_menu_item);
+          if (menubar)
+            gtk_widget_show_all (menubar);
 
-          g_print ("Thunar Test [file_menu]: Clicking File menu at %d, %d\n", x + alloc.x + alloc.width / 2, y + alloc.y + alloc.height / 2);
-          gdk_test_simulate_button (gdk_get_default_root_window (),
-                                    x + alloc.x + alloc.width / 2,
-                                    y + alloc.y + alloc.height / 2,
-                                    1,
-                                    GDK_BUTTON_PRESS_MASK,
-                                    GDK_BUTTON_PRESS);
-          gdk_test_simulate_button (gdk_get_default_root_window (),
-                                    x + alloc.x + alloc.width / 2,
-                                    y + alloc.y + alloc.height / 2,
-                                    1,
-                                    GDK_BUTTON_RELEASE_MASK,
-                                    GDK_BUTTON_RELEASE);
+          gtk_window_present (window);
+          gtk_widget_grab_focus (file_menu_item);
+
+          g_print ("Thunar Test [file_menu]: Activating File menu\n");
+          gtk_menu_item_select (GTK_MENU_ITEM (file_menu_item));
+          gtk_menu_item_activate (GTK_MENU_ITEM (file_menu_item));
 
           /* Wait a bit for the menu to open and render */
-          g_timeout_add (500, thunar_test_file_menu_step2, window);
+          g_timeout_add (1000, thunar_test_file_menu_step2, window);
         }
       else
         {
