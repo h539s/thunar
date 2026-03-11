@@ -52,16 +52,16 @@ take_screenshot_and_compare (GtkWindow *window, const gchar *test_case)
 
   g_print ("Thunar Test [%s]: Taking screenshot...\n", test_case);
 
-  gdk_window = gtk_widget_get_window (GTK_WIDGET (window));
+  gdk_window = gdk_get_default_root_window ();
   if (gdk_window == NULL)
     {
-      g_warning ("Thunar Test [%s]: Failed to get GdkWindow", test_case);
+      g_warning ("Thunar Test [%s]: Failed to get Root Window", test_case);
       return;
     }
 
   screenshot = gdk_pixbuf_get_from_window (gdk_window, 0, 0,
-                                           gdk_window_get_width (gdk_window),
-                                           gdk_window_get_height (gdk_window));
+                                           gdk_screen_get_width (gdk_screen_get_default ()),
+                                           gdk_screen_get_height (gdk_screen_get_default ()));
 
   if (screenshot == NULL)
     {
@@ -181,16 +181,16 @@ thunar_test_run (gpointer data)
           gtk_widget_get_allocation (file_menu_item, &alloc);
           gdk_window_get_origin (gtk_widget_get_window (file_menu_item), &x, &y);
 
-          g_print ("Thunar Test [file_menu]: Clicking File menu at %d, %d\n", x + alloc.width / 2, y + alloc.height / 2);
-          gdk_test_simulate_button (gtk_widget_get_window (file_menu_item),
-                                    x + alloc.width / 2,
-                                    y + alloc.height / 2,
+          g_print ("Thunar Test [file_menu]: Clicking File menu at %d, %d\n", x + alloc.x + alloc.width / 2, y + alloc.y + alloc.height / 2);
+          gdk_test_simulate_button (gdk_get_default_root_window (),
+                                    x + alloc.x + alloc.width / 2,
+                                    y + alloc.y + alloc.height / 2,
                                     1,
                                     GDK_BUTTON_PRESS_MASK,
                                     GDK_BUTTON_PRESS);
-          gdk_test_simulate_button (gtk_widget_get_window (file_menu_item),
-                                    x + alloc.width / 2,
-                                    y + alloc.height / 2,
+          gdk_test_simulate_button (gdk_get_default_root_window (),
+                                    x + alloc.x + alloc.width / 2,
+                                    y + alloc.y + alloc.height / 2,
                                     1,
                                     GDK_BUTTON_RELEASE_MASK,
                                     GDK_BUTTON_RELEASE);
