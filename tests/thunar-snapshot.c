@@ -7,7 +7,13 @@ void
 thunar_snapshot_assert (const gchar     *test_name,
                         cairo_surface_t *surface)
 {
-  g_autofree gchar *snapshot_dir = g_build_filename (g_test_get_dir (G_TEST_DIST), "snapshots", NULL);
+  const gchar *test_srcdir = g_getenv ("G_TEST_SRCDIR");
+  g_autofree gchar *snapshot_dir;
+
+  if (test_srcdir == NULL)
+    test_srcdir = g_test_get_dir (G_TEST_DIST);
+
+  snapshot_dir = g_build_filename (test_srcdir, "snapshots", NULL);
   g_autofree gchar *snapshot_filename = g_strdup_printf ("%s.png", test_name);
   g_autofree gchar *error_filename = g_strdup_printf ("%s_err.png", test_name);
   g_autofree gchar *snapshot_path = g_build_filename (snapshot_dir, snapshot_filename, NULL);
@@ -16,12 +22,12 @@ thunar_snapshot_assert (const gchar     *test_name,
   if (g_mkdir_with_parents (snapshot_dir, 0755) != 0)
     g_error ("Failed to create snapshot directory: %s", snapshot_dir);
 
-  if (!g_file_test (snapshot_path, G_FILE_TEST_EXISTS))
+  if (!g_file_test (snapshot_path, G_FILE_TEST_EXISTS) || g_getenv ("THUNAR_TESTS_SAVE_SNAPSHOTS") != NULL)
     {
       cairo_status_t status = cairo_surface_write_to_png (surface, snapshot_path);
       if (status != CAIRO_STATUS_SUCCESS)
-        g_error ("Failed to save initial snapshot %s: %s", snapshot_path, cairo_status_to_string (status));
-      g_message ("Initial snapshot created: %s", snapshot_path);
+        g_error ("Failed to save snapshot %s: %s", snapshot_path, cairo_status_to_string (status));
+      g_message ("Snapshot saved: %s", snapshot_path);
       return;
     }
 

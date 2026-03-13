@@ -35,4 +35,9 @@ test_text_renderer = executable(
   install: false,
 )
 
-test('test-text-renderer', test_text_renderer)
+test('test-text-renderer', test_text_renderer,
+  env: [
+    'G_TEST_SRCDIR=' + meson.current_source_dir(),
+    'G_TEST_BUILDDIR=' + meson.current_build_dir(),
+  ],
+)
