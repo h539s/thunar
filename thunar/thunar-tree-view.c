@@ -153,9 +153,10 @@ thunar_tree_view_row_collapsed (GtkTreeView *tree_view,
 static gboolean
 thunar_tree_view_delete_selected_files (ThunarTreeView *view);
 static void
-thunar_tree_view_context_menu (ThunarTreeView *view,
-                               GtkTreeModel   *model,
-                               GtkTreeIter    *iter);
+thunar_tree_view_context_menu (ThunarTreeView     *view,
+                               GtkTreeModel       *model,
+                               GtkTreeIter        *iter,
+                               const GdkRectangle *rect);
 static GdkDragAction
 thunar_tree_view_get_dest_actions (ThunarTreeView *view,
                                    GdkDragContext *context,
@@ -757,7 +758,12 @@ thunar_tree_view_button_press_event (GtkWidget      *widget,
           if (gtk_tree_model_get_iter (GTK_TREE_MODEL (view->model), &iter, path))
             {
               /* popup the context menu */
-              thunar_tree_view_context_menu (view, GTK_TREE_MODEL (view->model), &iter);
+              GdkRectangle rect;
+              rect.x = event->x;
+              rect.y = event->y;
+              rect.width = 1;
+              rect.height = 1;
+              thunar_tree_view_context_menu (view, GTK_TREE_MODEL (view->model), &iter, &rect);
 
               /* we effectively handled the event */
               result = TRUE;
@@ -852,6 +858,7 @@ thunar_tree_view_button_release_event (GtkWidget      *widget,
               view->select_path = NULL;
             }
         }
+      gtk_widget_grab_focus (widget);
     }
 
   /* reset the pressed button state */
@@ -966,6 +973,8 @@ thunar_tree_view_key_press_event (GtkWidget   *widget,
     }
 
   gtk_tree_path_free (path);
+  if (stopPropagation)
+    gtk_widget_grab_focus (widget);
 
   return stopPropagation;
 }
@@ -1009,8 +1018,14 @@ thunar_tree_view_drag_data_received (GtkWidget        *widget,
       if (G_LIKELY ((actions & (GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK)) != 0))
         {
           /* ask the user what to do with the drop data */
+          GdkRectangle rect;
+          rect.x = x;
+          rect.y = y;
+          rect.width = 1;
+          rect.height = 1;
+
           action = (gdk_drag_context_get_selected_action (context) == GDK_ACTION_ASK)
-                   ? thunar_dnd_ask (GTK_WIDGET (view), file, view->drop_file_list, actions)
+                   ? thunar_dnd_ask (GTK_WIDGET (view), file, view->drop_file_list, actions, &rect)
                    : gdk_drag_context_get_selected_action (context);
 
           /* perform the requested action */
@@ -1157,8 +1172,11 @@ thunar_tree_view_popup_menu (GtkWidget *widget)
   selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (view));
   if (gtk_tree_selection_get_selected (selection, &model, &iter))
     {
+      GdkRectangle rect;
+      gtk_widget_get_allocation (widget, &rect);
+
       /* popup the context menu */
-      thunar_tree_view_context_menu (view, model, &iter);
+      thunar_tree_view_context_menu (view, model, &iter, &rect);
       return TRUE;
     }
   else if (GTK_WIDGET_CLASS (thunar_tree_view_parent_class)->popup_menu != NULL)
@@ -1195,6 +1213,10 @@ thunar_tree_view_row_activated (GtkTreeView       *tree_view,
           thunar_tree_view_action_open (THUNAR_TREE_VIEW (tree_view));
         }
     }
+
+  /* Using TREE_SEARCH and <Return> opens a folder, but also our treeview
+   * looses the focus. Get the focus back: */
+  gtk_widget_grab_focus (GTK_WIDGET (tree_view));
 }
 
 
@@ -1276,9 +1298,10 @@ thunar_tree_view_delete_selected_files (ThunarTreeView *view)
 
 
 static void
-thunar_tree_view_context_menu (ThunarTreeView *view,
-                               GtkTreeModel   *model,
-                               GtkTreeIter    *iter)
+thunar_tree_view_context_menu (ThunarTreeView     *view,
+                               GtkTreeModel       *model,
+                               GtkTreeIter        *iter,
+                               const GdkRectangle *rect)
 {
   ThunarDevice *device;
   ThunarFile   *file;
@@ -1346,7 +1369,7 @@ thunar_tree_view_context_menu (ThunarTreeView *view,
   gtk_widget_show_all (GTK_WIDGET (context_menu));
   window = gtk_widget_get_toplevel (GTK_WIDGET (view));
   thunar_window_redirect_menu_tooltips_to_statusbar (THUNAR_WINDOW (window), GTK_MENU (context_menu));
-  thunar_gtk_menu_run (GTK_MENU (context_menu));
+  thunar_gtk_menu_run (GTK_MENU (context_menu), rect);
 
   /* cleanup */
   if (G_UNLIKELY (device != NULL))
@@ -1582,8 +1605,8 @@ thunar_tree_view_open_selection (ThunarTreeView *view)
   file = thunar_tree_view_get_selected_file (view);
   if (G_LIKELY (file != NULL))
     {
-      /* open that folder in the main view, but keep the focus on the tree-view */
-      thunar_navigator_change_directory (THUNAR_NAVIGATOR (view), file, FALSE);
+      /* open that folder in the main view */
+      thunar_navigator_change_directory (THUNAR_NAVIGATOR (view), file, TRUE);
       g_object_unref (file);
     }
 }
@@ -1703,7 +1726,6 @@ thunar_tree_view_set_cursor (gpointer user_data)
   gboolean        done = FALSE;
   GList          *lp;
   GList          *path_as_list = NULL;
-  gboolean        matching_file_found = FALSE;
 
   /* Stop attempt to set the cursor if we fail to do so after 5 seconds */
   if (time (NULL) > view->set_cursor_start_timestamp + 5)
@@ -1758,7 +1780,6 @@ thunar_tree_view_set_cursor (gpointer user_data)
   for (; lp != NULL; lp = lp->next)
     {
       file = THUNAR_FILE (lp->data);
-      matching_file_found = FALSE;
 
       /* 3. Check if the contents of the corresponding folder is still being loaded */
       folder = thunar_folder_get_for_file (file);
@@ -1775,16 +1796,16 @@ thunar_tree_view_set_cursor (gpointer user_data)
         {
           gtk_tree_model_get (GTK_TREE_MODEL (view->model), &iter, THUNAR_TREE_MODEL_COLUMN_FILE, &file_in_tree, -1);
           if (file == file_in_tree)
-            matching_file_found = TRUE;
-
+            {
+              g_object_unref (file_in_tree);
+              break;
+            }
           if (file_in_tree)
             g_object_unref (file_in_tree);
 
-          if (matching_file_found || !gtk_tree_model_iter_next (GTK_TREE_MODEL (view->model), &iter))
+          if (!gtk_tree_model_iter_next (GTK_TREE_MODEL (view->model), &iter))
             break;
         }
-      if (!matching_file_found)
-        break;
 
       /* 5. Did we already find the full path ?*/
       if (lp->next == NULL)

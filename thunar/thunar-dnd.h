@@ -25,10 +25,11 @@
 G_BEGIN_DECLS;
 
 GdkDragAction
-thunar_dnd_ask (GtkWidget    *widget,
-                ThunarFile   *folder,
-                GList        *path_list,
-                GdkDragAction actions);
+thunar_dnd_ask (GtkWidget          *widget,
+                ThunarFile         *folder,
+                GList              *path_list,
+                GdkDragAction       actions,
+                const GdkRectangle *rect);
 
 gboolean
 thunar_dnd_perform (GtkWidget    *widget,

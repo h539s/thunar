@@ -458,7 +458,12 @@ thunar_abstract_icon_view_button_press_event (XfceIconView           *view,
           xfce_icon_view_unselect_all (view);
 
           /* open the context menu */
-          thunar_standard_view_context_menu (THUNAR_STANDARD_VIEW (abstract_icon_view));
+          GdkRectangle rect;
+          rect.x = event->x;
+          rect.y = event->y;
+          rect.width = 1;
+          rect.height = 1;
+          thunar_standard_view_context_menu (THUNAR_STANDARD_VIEW (abstract_icon_view), &rect);
         }
 
       return TRUE;
@@ -615,7 +620,9 @@ thunar_abstract_icon_view_key_press_event (XfceIconView           *view,
   /* popup context menu if "Menu" or "<Shift>F10" is pressed */
   if (event->keyval == GDK_KEY_Menu || ((event->state & GDK_SHIFT_MASK) != 0 && event->keyval == GDK_KEY_F10))
     {
-      thunar_standard_view_context_menu (THUNAR_STANDARD_VIEW (abstract_icon_view));
+      GdkRectangle rect;
+      gtk_widget_get_allocation (GTK_WIDGET (abstract_icon_view), &rect);
+      thunar_standard_view_context_menu (THUNAR_STANDARD_VIEW (abstract_icon_view), &rect);
       return TRUE;
     }
 

@@ -187,7 +187,8 @@ GType
 thunar_standard_view_get_type (void) G_GNUC_CONST;
 
 void
-thunar_standard_view_context_menu (ThunarStandardView *standard_view);
+thunar_standard_view_context_menu (ThunarStandardView *standard_view,
+                                   const GdkRectangle *rect);
 void
 thunar_standard_view_queue_popup (ThunarStandardView *standard_view,
                                   GdkEventButton     *event);

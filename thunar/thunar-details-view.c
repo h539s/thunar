@@ -809,7 +809,12 @@ thunar_details_view_column_header_clicked (ThunarDetailsView *details_view,
       gtk_widget_show_all (menu);
 
       /* run the menu (takes over the floating of menu) */
-      thunar_gtk_menu_run (GTK_MENU (menu));
+      GdkRectangle rect;
+      rect.x = event->x;
+      rect.y = event->y;
+      rect.width = 1;
+      rect.height = 1;
+      thunar_gtk_menu_run_at_event (GTK_MENU (menu), (GdkEvent *) event, &rect);
       return TRUE;
     }
 
@@ -947,7 +952,11 @@ thunar_details_view_button_press_event (GtkTreeView       *tree_view,
       if (path == NULL)
         {
           /* open the context menu */
-          thunar_standard_view_context_menu (THUNAR_STANDARD_VIEW (details_view));
+          rect.x = event->x;
+          rect.y = event->y;
+          rect.width = 1;
+          rect.height = 1;
+          thunar_standard_view_context_menu (THUNAR_STANDARD_VIEW (details_view), &rect);
         }
       else
         {
@@ -1048,7 +1057,9 @@ thunar_details_view_key_press_event (GtkTreeView       *tree_view,
   /* popup context menu if "Menu" or "<Shift>F10" is pressed */
   if (event->keyval == GDK_KEY_Menu || ((event->state & GDK_SHIFT_MASK) != 0 && event->keyval == GDK_KEY_F10))
     {
-      thunar_standard_view_context_menu (THUNAR_STANDARD_VIEW (details_view));
+      GdkRectangle rect;
+      gtk_widget_get_allocation (GTK_WIDGET (details_view), &rect);
+      thunar_standard_view_context_menu (THUNAR_STANDARD_VIEW (details_view), &rect);
       return TRUE;
     }
 

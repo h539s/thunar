@@ -181,8 +181,9 @@ thunar_window_notebook_button_press_event (GtkWidget      *notebook,
                                            GdkEventButton *event,
                                            ThunarWindow   *window);
 static gboolean
-thunar_window_notebook_popup_menu (GtkWidget    *notebook,
-                                   ThunarWindow *window);
+thunar_window_notebook_popup_menu (GtkWidget          *notebook,
+                                   const GdkRectangle *rect,
+                                   ThunarWindow       *window);
 static gpointer
 thunar_window_notebook_create_window (GtkWidget    *notebook,
                                       GtkWidget    *page,
@@ -292,8 +293,7 @@ thunar_window_action_show_toolbar_editor (ThunarWindow *window);
 static void
 thunar_window_replace_view (ThunarWindow *window,
                             GtkWidget    *view_to_replace,
-                            GType         view_type,
-                            gboolean      grab_focus);
+                            GType         view_type);
 static void
 thunar_window_action_view_changed (ThunarWindow *window,
                                    GType         view_type);
@@ -1908,6 +1908,29 @@ thunar_window_finalize (GObject *object)
 
 
 static gboolean
+thunar_window_notebook_popup_menu_wrapper (GtkWidget    *notebook,
+                                           ThunarWindow *window)
+{
+  GtkWidget   *page;
+  GtkWidget   *label;
+  GdkRectangle rect;
+  gint         page_num;
+
+  page_num = gtk_notebook_get_current_page (GTK_NOTEBOOK (notebook));
+  page = gtk_notebook_get_nth_page (GTK_NOTEBOOK (notebook), page_num);
+  label = gtk_notebook_get_tab_label (GTK_NOTEBOOK (notebook), page);
+
+  if (label != NULL && gtk_widget_get_visible (label))
+    gtk_widget_get_allocation (label, &rect);
+  else
+    gtk_widget_get_allocation (notebook, &rect);
+
+  return thunar_window_notebook_popup_menu (notebook, &rect, window);
+}
+
+
+
+static gboolean
 thunar_window_delete (GtkWidget *widget,
                       GdkEvent  *event,
                       gpointer   data)
@@ -2451,14 +2474,15 @@ thunar_window_create_view_binding (ThunarWindow *window,
 
 static void
 thunar_window_switch_current_view (ThunarWindow *window,
-                                   GtkWidget    *new_view,
-                                   gboolean      grab_focus)
+                                   GtkWidget    *new_view)
 {
   GSList        *view_bindings;
   ThunarFile    *current_directory;
   ThunarHistory *history;
   gchar         *search_query;
+#ifdef HAVE_VTE
   GtkWidget     *terminal;
+#endif
 
   _thunar_return_if_fail (THUNAR_IS_WINDOW (window));
   _thunar_return_if_fail (THUNAR_IS_VIEW (new_view));
@@ -2603,8 +2627,7 @@ thunar_window_switch_current_view (ThunarWindow *window,
     g_object_set (G_OBJECT (window->preferences), "last-view", g_type_name (window->view_type), NULL);
 
   /* take focus on the new view */
-  if (grab_focus)
-    gtk_widget_grab_focus (window->view);
+  gtk_widget_grab_focus (window->view);
 }
 
 
@@ -2629,7 +2652,7 @@ thunar_window_notebook_switch_page (GtkWidget    *notebook,
   if ((window->view == view) || (window->notebook_selected != notebook))
     return;
 
-  thunar_window_switch_current_view (window, view, TRUE);
+  thunar_window_switch_current_view (window, view);
 
   /* update the selection (will as well update the preview image) */
   thunar_window_selection_changed (window);
@@ -2833,7 +2856,12 @@ thunar_window_notebook_button_press_event (GtkWidget      *notebook,
           gtk_notebook_set_current_page (GTK_NOTEBOOK (notebook), page_num);
 
           /* show the tab menu */
-          thunar_window_notebook_popup_menu (notebook, window);
+          GdkRectangle rect;
+          rect.x = event->x;
+          rect.y = event->y;
+          rect.width = 1;
+          rect.height = 1;
+          thunar_window_notebook_popup_menu (notebook, &rect, window);
         }
 
       return TRUE;
@@ -2845,8 +2873,9 @@ thunar_window_notebook_button_press_event (GtkWidget      *notebook,
 
 
 static gboolean
-thunar_window_notebook_popup_menu (GtkWidget    *notebook,
-                                   ThunarWindow *window)
+thunar_window_notebook_popup_menu (GtkWidget          *notebook,
+                                   const GdkRectangle *rect,
+                                   ThunarWindow       *window)
 {
   GtkWidget *menu;
 
@@ -2860,7 +2889,7 @@ thunar_window_notebook_popup_menu (GtkWidget    *notebook,
   xfce_gtk_menu_append_separator (GTK_MENU_SHELL (menu));
   xfce_gtk_menu_item_new_from_action_entry (get_action_entry (THUNAR_WINDOW_ACTION_CLOSE_TAB), G_OBJECT (window), GTK_MENU_SHELL (menu));
   gtk_widget_show_all (menu);
-  thunar_gtk_menu_run (GTK_MENU (menu));
+  thunar_gtk_menu_run (GTK_MENU (menu), rect);
   return TRUE;
 }
 
@@ -3181,7 +3210,7 @@ thunar_window_paned_notebooks_add (ThunarWindow *window)
   g_signal_connect (G_OBJECT (notebook), "page-added", G_CALLBACK (thunar_window_notebook_page_added), window);
   g_signal_connect (G_OBJECT (notebook), "page-removed", G_CALLBACK (thunar_window_notebook_page_removed), window);
   g_signal_connect (G_OBJECT (notebook), "button-press-event", G_CALLBACK (thunar_window_notebook_button_press_event), window);
-  g_signal_connect (G_OBJECT (notebook), "popup-menu", G_CALLBACK (thunar_window_notebook_popup_menu), window);
+  g_signal_connect (G_OBJECT (notebook), "popup-menu", G_CALLBACK (thunar_window_notebook_popup_menu_wrapper), window);
   g_signal_connect (G_OBJECT (notebook), "create-window", G_CALLBACK (thunar_window_notebook_create_window), window);
 
   gtk_notebook_set_show_border (GTK_NOTEBOOK (notebook), FALSE);
@@ -4014,7 +4043,7 @@ thunar_window_action_detach_tab (ThunarWindow *window,
   g_object_unref (tab_page_container);
 
   /* Explicitly set the new window's current view and active terminal. */
-  thunar_window_switch_current_view (new_thunar_window, view_to_move, TRUE);
+  thunar_window_switch_current_view (new_thunar_window, view_to_move);
 
   return TRUE;
 }
@@ -4518,7 +4547,7 @@ thunar_window_action_clear_directory_specific_settings (ThunarWindow *window)
   g_signal_emit (G_OBJECT (window), window_signals[RELOAD], 0, TRUE, &result);
 
   /* replace the active view with a new one of the correct type */
-  thunar_window_replace_view (window, window->view, view_type, TRUE);
+  thunar_window_replace_view (window, window->view, view_type);
 
   /* required in case of shortcut activation, in order to signal that the accel key got handled */
   return TRUE;
@@ -4568,8 +4597,7 @@ thunar_window_action_compact_view (ThunarWindow *window)
 static void
 thunar_window_replace_view (ThunarWindow *window,
                             GtkWidget    *view_to_replace,
-                            GType         view_type,
-                            gboolean      grab_focus)
+                            GType         view_type)
 {
   ThunarFile *file = NULL;
   ThunarFile *current_directory = NULL;
@@ -4644,7 +4672,7 @@ thunar_window_replace_view (ThunarWindow *window,
 #endif
   /* If the replaced view was the active one, update the main window view pointer. */
   if (view_to_replace == window->view)
-    thunar_window_switch_current_view (window, new_view, grab_focus);
+    thunar_window_switch_current_view (window, new_view);
 
   /* scroll to the previously visible file in the old view */
   if (G_UNLIKELY (file != NULL))
@@ -4666,7 +4694,7 @@ static void
 thunar_window_action_view_changed (ThunarWindow *window,
                                    GType         view_type)
 {
-  thunar_window_replace_view (window, window->view, view_type, TRUE);
+  thunar_window_replace_view (window, window->view, view_type);
 
   thunar_window_view_switcher_update (window);
 
@@ -5442,11 +5470,25 @@ thunar_window_action_menu (ThunarWindow *window)
   g_signal_connect_swapped (G_OBJECT (menu), "deactivate", G_CALLBACK (thunar_window_action_menu_deactivate), window);
 
   /* show the menu below its toolbar button */
-  gtk_menu_popup_at_widget (GTK_MENU (menu),
-                            window->location_toolbar_item_menu,
-                            GDK_GRAVITY_SOUTH_WEST,
-                            GDK_GRAVITY_NORTH_WEST,
-                            NULL);
+  GdkEvent    *event = gtk_get_current_event ();
+  GdkRectangle rect;
+
+  if (event != NULL && (event->type == GDK_BUTTON_PRESS || event->type == GDK_BUTTON_RELEASE))
+    {
+      rect.x = event->button.x;
+      rect.y = event->button.y;
+      rect.width = 1;
+      rect.height = 1;
+    }
+  else
+    {
+      gtk_widget_get_allocation (window->location_toolbar_item_menu, &rect);
+    }
+
+  thunar_gtk_menu_run (GTK_MENU (menu), &rect);
+
+  if (event != NULL)
+    gdk_event_free (event);
 
   /* required in case of shortcut activation, in order to signal that the accel key got handled */
   return TRUE;
@@ -5788,7 +5830,7 @@ thunar_window_set_directory_specific_settings (ThunarWindow *window,
       view_type = thunar_window_view_type_for_directory (window, directory);
 
       /* replace the old view with a new one */
-      thunar_window_replace_view (window, lp->data, view_type, TRUE);
+      thunar_window_replace_view (window, lp->data, view_type);
     }
 
   g_list_free (tabs);
@@ -5899,7 +5941,7 @@ thunar_window_set_current_directory (ThunarWindow *window,
 
   /* change the view type if necessary */
   if (window->view != NULL && window->view_type != type)
-    thunar_window_replace_view (window, window->view, type, grab_focus);
+    thunar_window_replace_view (window, window->view, type);
 
   /* grab the focus to the main view */
   if (grab_focus && window->view != NULL)
@@ -6155,10 +6197,16 @@ thunar_window_history_clicked (GtkWidget      *button,
   history = thunar_standard_view_get_history (THUNAR_STANDARD_VIEW (window->view));
   if (event->button == 3)
     {
+      GdkRectangle rect;
+      rect.x = event->x;
+      rect.y = event->y;
+      rect.width = 1;
+      rect.height = 1;
+
       if (button == window->location_toolbar_item_back)
-        thunar_history_show_menu (history, THUNAR_HISTORY_MENU_BACK, button);
+        thunar_history_show_menu (history, THUNAR_HISTORY_MENU_BACK, button, &rect);
       else if (button == window->location_toolbar_item_forward)
-        thunar_history_show_menu (history, THUNAR_HISTORY_MENU_FORWARD, button);
+        thunar_history_show_menu (history, THUNAR_HISTORY_MENU_FORWARD, button, &rect);
       else
         g_warning ("This button is not able to spawn a history menu");
 
@@ -6287,7 +6335,13 @@ thunar_window_toolbar_button_press_event (GtkWidget      *toolbar,
       gtk_widget_show_all (menu);
 
       /* run the menu (takes over the floating of menu) */
-      thunar_gtk_menu_run (GTK_MENU (menu));
+      GdkRectangle rect;
+      rect.x = event->x;
+      rect.y = event->y;
+      rect.width = 1;
+      rect.height = 1;
+
+      thunar_gtk_menu_run (GTK_MENU (menu), &rect);
 
       return TRUE;
     }

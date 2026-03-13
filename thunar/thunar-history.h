@@ -71,7 +71,8 @@ thunar_history_action_forward (ThunarHistory *history);
 void
 thunar_history_show_menu (ThunarHistory        *history,
                           ThunarHistoryMenuType type,
-                          GtkWidget            *parent);
+                          GtkWidget            *parent,
+                          const GdkRectangle   *rect);
 void
 thunar_history_add (ThunarHistory *history,
                     ThunarFile    *directory);

@@ -189,11 +189,13 @@ thunar_gtk_menu_clean (GtkMenu *menu)
 /**
  * thunar_gtk_menu_run:
  * @menu : a #GtkMenu.
+ * @rect : a #GdkRectangle.
  *
  * Convenience wrapper for thunar_gtk_menu_run_at_event() to run a menu for the current event
  **/
 void
-thunar_gtk_menu_run (GtkMenu *menu)
+thunar_gtk_menu_run (GtkMenu            *menu,
+                     const GdkRectangle *rect)
 {
   GdkEvent *event = gtk_get_current_event ();
 
@@ -204,31 +206,52 @@ thunar_gtk_menu_run (GtkMenu *menu)
       event->button.button = 3;
     }
 
-  thunar_gtk_menu_run_at_event (menu, event);
+  thunar_gtk_menu_run_at_event (menu, event, rect);
   gdk_event_free (event);
 }
 
 
 
 static void
-thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
-                                  GdkEvent *event)
+thunar_gtk_menu_popup (GtkMenu            *menu,
+                       GdkEvent           *event,
+                       const GdkRectangle *rect)
 {
   GdkWindow   *window;
   GdkDevice   *device;
   GdkDisplay  *display;
   GdkSeat     *seat;
-  GdkRectangle rect = { 0, 0, 1, 1 };
+  GdkRectangle pointer_rect = { 0, 0, 1, 1 };
 
-  /* fallback if event not set */
-  if (event == NULL)
+  /* fallback if event not set and no rect */
+  if (event == NULL && rect == NULL)
     {
       gtk_menu_popup_at_pointer (menu, event);
       return;
     }
 
-  /* create popup rect */
-  window = gdk_event_get_window (event);
+  /* if we have a rect, we use it */
+  if (rect != NULL)
+    {
+      window = (event != NULL) ? gdk_event_get_window (event) : NULL;
+      if (window == NULL)
+        {
+          GtkWidget *widget = gtk_menu_get_attach_widget (menu);
+          if (widget != NULL)
+            window = gtk_widget_get_window (widget);
+        }
+
+      gtk_menu_popup_at_rect (menu,
+                              window,
+                              rect,
+                              GDK_GRAVITY_SOUTH_EAST,
+                              GDK_GRAVITY_NORTH_WEST,
+                              event);
+      return;
+    }
+
+  /* create popup rect from pointer */
+  window = (event != NULL) ? gdk_event_get_window (event) : NULL;
   if (window != NULL)
     {
       device = gdk_event_get_device (event);
@@ -243,7 +266,7 @@ thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
            * See: https://gitlab.xfce.org/xfce/thunar/-/issues/1592 */
           window = gdk_window_get_toplevel (window);
 
-          gdk_window_get_device_position (window, device, &rect.x, &rect.y, NULL);
+          gdk_window_get_device_position (window, device, &pointer_rect.x, &pointer_rect.y, NULL);
         }
 
       /* fallback needed for right-click DnD from xfdesktop to Thunar */
@@ -253,15 +276,15 @@ thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
           seat = gdk_display_get_default_seat (display);
           device = gdk_seat_get_pointer (seat);
 
-          gdk_device_get_position (device, NULL, &rect.x, &rect.y);
-          window = gdk_device_get_window_at_position (device, &rect.x, &rect.y);
+          gdk_device_get_position (device, NULL, &pointer_rect.x, &pointer_rect.y);
+          window = gdk_device_get_window_at_position (device, &pointer_rect.x, &pointer_rect.y);
         }
     }
 
   /* pop up the menu at the rectangle below the mouse cursor */
   gtk_menu_popup_at_rect (menu,
                           window,
-                          &rect,
+                          &pointer_rect,
                           GDK_GRAVITY_SOUTH_EAST,
                           GDK_GRAVITY_NORTH_WEST,
                           event);
@@ -273,8 +296,9 @@ thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
  * thunar_gtk_menu_run_at_event:
  * @menu  : a #GtkMenu.
  * @event : a #GdkEvent which may be NULL if no previous event was stored.
+ * @rect  : a #GdkRectangle.
  *
- * A simple wrapper around gtk_menu_popup_at_pointer(), which runs the @menu in a separate
+ * A simple wrapper around gtk_menu_popup_at_rect(), which runs the @menu in a separate
  * main loop and returns only after the @menu was deactivated.
  *
  * This method automatically takes over the floating reference of @menu if any and
@@ -283,8 +307,9 @@ thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
  *
  **/
 void
-thunar_gtk_menu_run_at_event (GtkMenu  *menu,
-                              GdkEvent *event)
+thunar_gtk_menu_run_at_event (GtkMenu            *menu,
+                              GdkEvent           *event,
+                              const GdkRectangle *rect)
 {
   GMainLoop *loop;
   gulong     signal_id;
@@ -297,7 +322,7 @@ thunar_gtk_menu_run_at_event (GtkMenu  *menu,
   /* run an internal main loop */
   loop = g_main_loop_new (NULL, FALSE);
   signal_id = g_signal_connect_swapped (G_OBJECT (menu), "deactivate", G_CALLBACK (g_main_loop_quit), loop);
-  thunar_gtk_menu_popup_at_pointer (menu, event);
+  thunar_gtk_menu_popup (menu, event, rect);
   gtk_menu_reposition (menu);
   gtk_grab_add (GTK_WIDGET (menu));
   g_main_loop_run (loop);

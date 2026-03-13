@@ -71,7 +71,8 @@ thunar_chooser_dialog_selection_func (GtkTreeSelection *selection,
                                       gboolean          path_currently_selected,
                                       gpointer          user_data);
 static gboolean
-thunar_chooser_dialog_context_menu (ThunarChooserDialog *dialog);
+thunar_chooser_dialog_context_menu (ThunarChooserDialog *dialog,
+                                    const GdkRectangle  *rect);
 static void
 thunar_chooser_dialog_update_accept (ThunarChooserDialog *dialog);
 static void
@@ -593,7 +594,8 @@ thunar_chooser_dialog_selection_func (GtkTreeSelection *selection,
 
 
 static gboolean
-thunar_chooser_dialog_context_menu (ThunarChooserDialog *dialog)
+thunar_chooser_dialog_context_menu (ThunarChooserDialog *dialog,
+                                    const GdkRectangle  *rect)
 {
   GtkTreeSelection *selection;
   GtkTreeModel     *model;
@@ -632,7 +634,7 @@ thunar_chooser_dialog_context_menu (ThunarChooserDialog *dialog)
   gtk_widget_show (item);
 
   /* run the menu (takes over the floating of menu) */
-  thunar_gtk_menu_run (GTK_MENU (menu));
+  thunar_gtk_menu_run (GTK_MENU (menu), rect);
 
   /* clean up */
   g_object_unref (app_info);
@@ -1027,7 +1029,12 @@ thunar_chooser_dialog_button_press_event (GtkWidget           *tree_view,
           gtk_tree_path_free (path);
 
           /* ...and popup the context menu */
-          return thunar_chooser_dialog_context_menu (dialog);
+          GdkRectangle rect;
+          rect.x = event->x;
+          rect.y = event->y;
+          rect.width = 1;
+          rect.height = 1;
+          return thunar_chooser_dialog_context_menu (dialog, &rect);
         }
     }
 
@@ -1111,12 +1118,15 @@ static gboolean
 thunar_chooser_dialog_popup_menu (GtkWidget           *tree_view,
                                   ThunarChooserDialog *dialog)
 {
+  GdkRectangle rect;
+
   _thunar_return_val_if_fail (THUNAR_IS_CHOOSER_DIALOG (dialog), FALSE);
   _thunar_return_val_if_fail (dialog->tree_view == tree_view, FALSE);
   _thunar_return_val_if_fail (GTK_IS_TREE_VIEW (tree_view), FALSE);
 
   /* popup the context menu */
-  return thunar_chooser_dialog_context_menu (dialog);
+  gtk_widget_get_allocation (tree_view, &rect);
+  return thunar_chooser_dialog_context_menu (dialog, &rect);
 }
 
 

@@ -724,8 +724,14 @@ thunar_location_button_drag_data_received (GtkWidget        *button,
       if (G_LIKELY ((actions & (GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK)) != 0))
         {
           /* as the user what to do with the drop data */
+      GdkRectangle rect;
+      rect.x = x;
+      rect.y = y;
+      rect.width = 1;
+      rect.height = 1;
+
           action = (gdk_drag_context_get_selected_action (context) == GDK_ACTION_ASK)
-                   ? thunar_dnd_ask (button, location_button->file, location_button->drop_file_list, actions)
+               ? thunar_dnd_ask (button, location_button->file, location_button->drop_file_list, actions, &rect)
                    : gdk_drag_context_get_selected_action (context);
 
           /* perform the requested action */

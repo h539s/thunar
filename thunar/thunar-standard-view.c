@@ -3178,7 +3178,12 @@ thunar_standard_view_button_release_event (GtkWidget          *view,
   g_source_remove (standard_view->priv->drag_timer_id);
 
   /* fire up the context menu */
-  thunar_standard_view_context_menu (standard_view);
+  GdkRectangle rect;
+  rect.x = event->x;
+  rect.y = event->y;
+  rect.width = 1;
+  rect.height = 1;
+  thunar_standard_view_context_menu (standard_view, &rect);
 
   return TRUE;
 }
@@ -3746,8 +3751,14 @@ thunar_standard_view_receive_text_uri_list (GdkDragContext     *context,
         g_source_remove (standard_view->priv->drag_enter_timer_id);
 
       /* ask the user what to do with the drop data */
+      GdkRectangle rect;
+      rect.x = x;
+      rect.y = y;
+      rect.width = 1;
+      rect.height = 1;
+
       action = (gdk_drag_context_get_selected_action (context) == GDK_ACTION_ASK)
-               ? thunar_dnd_ask (GTK_WIDGET (standard_view), file, standard_view->priv->drop_file_list, actions)
+               ? thunar_dnd_ask (GTK_WIDGET (standard_view), file, standard_view->priv->drop_file_list, actions, &rect)
                : gdk_drag_context_get_selected_action (context);
 
       /* perform the requested action */
@@ -4382,9 +4393,15 @@ static gboolean
 thunar_standard_view_drag_timer (gpointer user_data)
 {
   ThunarStandardView *standard_view = THUNAR_STANDARD_VIEW (user_data);
+  GdkRectangle        rect;
+
+  rect.x = standard_view->priv->drag_x;
+  rect.y = standard_view->priv->drag_y;
+  rect.width = 1;
+  rect.height = 1;
 
   /* fire up the context menu */
-  thunar_standard_view_context_menu (standard_view);
+  thunar_standard_view_context_menu (standard_view, &rect);
 
   return FALSE;
 }
@@ -4420,7 +4437,8 @@ thunar_standard_view_drag_timer_destroy (gpointer user_data)
  * using one of the context menu shortcuts.
  **/
 void
-thunar_standard_view_context_menu (ThunarStandardView *standard_view)
+thunar_standard_view_context_menu (ThunarStandardView *standard_view,
+                                   const GdkRectangle *rect)
 {
   GtkWidget  *window;
   ThunarMenu *context_menu;
@@ -4469,12 +4487,12 @@ thunar_standard_view_context_menu (ThunarStandardView *standard_view)
   /* if there is a drag_timer_event (long press), we use it */
   if (standard_view->priv->drag_timer_event != NULL)
     {
-      thunar_gtk_menu_run_at_event (GTK_MENU (context_menu), standard_view->priv->drag_timer_event);
+      thunar_gtk_menu_run_at_event (GTK_MENU (context_menu), standard_view->priv->drag_timer_event, rect);
       gdk_event_free (standard_view->priv->drag_timer_event);
       standard_view->priv->drag_timer_event = NULL;
     }
   else
-    thunar_gtk_menu_run (GTK_MENU (context_menu));
+    thunar_gtk_menu_run (GTK_MENU (context_menu), rect);
 
   g_list_free_full (selected_items, (GDestroyNotify) gtk_tree_path_free);
 

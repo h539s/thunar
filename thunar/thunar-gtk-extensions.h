@@ -34,10 +34,12 @@ thunar_gtk_label_disable_hyphens (GtkLabel *label);
 void
 thunar_gtk_menu_clean (GtkMenu *menu);
 void
-thunar_gtk_menu_run (GtkMenu *menu);
+thunar_gtk_menu_run (GtkMenu            *menu,
+                     const GdkRectangle *rect);
 void
-thunar_gtk_menu_run_at_event (GtkMenu  *menu,
-                              GdkEvent *event);
+thunar_gtk_menu_run_at_event (GtkMenu            *menu,
+                              GdkEvent           *event,
+                              const GdkRectangle *rect);
 void
 thunar_gtk_menu_hide_accel_labels (GtkMenu *menu);
 

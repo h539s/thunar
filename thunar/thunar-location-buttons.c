@@ -1328,6 +1328,25 @@ thunar_location_buttons_context_menu (ThunarLocationButton  *button,
   window = gtk_widget_get_toplevel (GTK_WIDGET (buttons));
   thunar_window_redirect_menu_tooltips_to_statusbar (THUNAR_WINDOW (window), GTK_MENU (context_menu));
 
-  thunar_gtk_menu_run (GTK_MENU (context_menu));
+  GdkEvent    *event = gtk_get_current_event ();
+  GdkRectangle rect;
+
+  if (event != NULL && (event->type == GDK_BUTTON_PRESS || event->type == GDK_BUTTON_RELEASE))
+    {
+      rect.x = event->button.x;
+      rect.y = event->button.y;
+      rect.width = 1;
+      rect.height = 1;
+    }
+  else
+    {
+      gtk_widget_get_allocation (GTK_WIDGET (button), &rect);
+    }
+
+  thunar_gtk_menu_run (GTK_MENU (context_menu), &rect);
+
+  if (event != NULL)
+    gdk_event_free (event);
+
   return TRUE;
 }

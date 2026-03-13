@@ -93,7 +93,8 @@ static void
 thunar_renamer_dialog_response (GtkDialog *dialog,
                                 gint       response);
 static void
-thunar_renamer_dialog_context_menu (ThunarRenamerDialog *renamer_dialog);
+thunar_renamer_dialog_context_menu (ThunarRenamerDialog *renamer_dialog,
+                                    const GdkRectangle  *rect);
 static void
 thunar_renamer_dialog_help (ThunarRenamerDialog *renamer_dialog);
 static void
@@ -916,7 +917,8 @@ thunar_renamer_dialog_append_menu_item (ThunarRenamerDialog *renamer_dialog,
 
 
 static void
-thunar_renamer_dialog_context_menu (ThunarRenamerDialog *renamer_dialog)
+thunar_renamer_dialog_context_menu (ThunarRenamerDialog *renamer_dialog,
+                                    const GdkRectangle  *rect)
 {
   ThunarxRenamer *renamer;
   ThunarMenu     *menu;
@@ -955,7 +957,7 @@ thunar_renamer_dialog_context_menu (ThunarRenamerDialog *renamer_dialog)
   thunar_gtk_menu_hide_accel_labels (GTK_MENU (menu));
   gtk_widget_show_all (GTK_WIDGET (menu));
 
-  thunar_gtk_menu_run (GTK_MENU (menu));
+  thunar_gtk_menu_run (GTK_MENU (menu), rect);
 
   /* release the additional reference on the dialog */
   g_object_unref (G_OBJECT (renamer_dialog));
@@ -1344,7 +1346,12 @@ thunar_renamer_dialog_button_press_event (GtkWidget           *tree_view,
         }
 
       /* popup the context menu */
-      thunar_renamer_dialog_context_menu (renamer_dialog);
+      GdkRectangle rect;
+      rect.x = event->x;
+      rect.y = event->y;
+      rect.width = 1;
+      rect.height = 1;
+      thunar_renamer_dialog_context_menu (renamer_dialog, &rect);
 
       /* we handled the event */
       return TRUE;
@@ -1647,11 +1654,14 @@ static gboolean
 thunar_renamer_dialog_popup_menu (GtkWidget           *tree_view,
                                   ThunarRenamerDialog *renamer_dialog)
 {
+  GdkRectangle rect;
+
   _thunar_return_val_if_fail (GTK_IS_TREE_VIEW (tree_view), FALSE);
   _thunar_return_val_if_fail (THUNAR_IS_RENAMER_DIALOG (renamer_dialog), FALSE);
 
   /* popup the context menu */
-  thunar_renamer_dialog_context_menu (renamer_dialog);
+  gtk_widget_get_allocation (tree_view, &rect);
+  thunar_renamer_dialog_context_menu (renamer_dialog, &rect);
 
   /* we handled the event */
   return TRUE;

@@ -58,10 +58,11 @@ dnd_action_selected (GtkWidget     *item,
  * Return value: the selected #GdkDragAction or 0 to cancel.
  **/
 GdkDragAction
-thunar_dnd_ask (GtkWidget    *widget,
-                ThunarFile   *folder,
-                GList        *path_list,
-                GdkDragAction dnd_actions)
+thunar_dnd_ask (GtkWidget          *widget,
+                ThunarFile         *folder,
+                GList              *path_list,
+                GdkDragAction       dnd_actions,
+                const GdkRectangle *rect)
 {
   static const GdkDragAction dnd_action_items[] = { GDK_ACTION_COPY, GDK_ACTION_MOVE, GDK_ACTION_LINK };
   static const gchar        *dnd_action_names[] = { N_ ("Copy _Here"), N_ ("_Move Here"), N_ ("_Link Here") };
@@ -172,7 +173,7 @@ thunar_dnd_ask (GtkWidget    *widget,
   gtk_widget_show (item);
 
   /* run the menu (takes over the floating of menu) */
-  thunar_gtk_menu_run (GTK_MENU (menu));
+  thunar_gtk_menu_run (GTK_MENU (menu), rect);
 
   /* cleanup */
   g_object_unref (G_OBJECT (factory));

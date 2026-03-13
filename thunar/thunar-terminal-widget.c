@@ -900,10 +900,13 @@ _sync_terminal_to_fm (ThunarTerminalWidget *self, const gchar *cwd_uri)
           window = gtk_widget_get_toplevel (GTK_WIDGET (self));
 
           if (THUNAR_IS_WINDOW (window))
-            thunar_window_set_current_directory (THUNAR_WINDOW (window), priv->current_directory, FALSE);
+            thunar_window_set_current_directory (THUNAR_WINDOW (window), priv->current_directory, TRUE);
 
           /* Inform potential subscribers */
           g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_NAVIGATOR_CURRENT_DIRECTORY]);
+
+          /* Make sure we still have focus */
+          gtk_widget_grab_focus (GTK_WIDGET (priv->terminal));
         }
     }
 }
@@ -1247,8 +1250,15 @@ on_terminal_button_release (GtkWidget      *widget,
 
   if (event->button == GDK_BUTTON_SECONDARY)
     {
-      GtkWidget *menu = create_terminal_popup_menu (self);
-      gtk_menu_popup_at_pointer (GTK_MENU (menu), (GdkEvent *) event);
+      GtkWidget   *menu = create_terminal_popup_menu (self);
+      GdkRectangle rect;
+
+      rect.x = event->x;
+      rect.y = event->y;
+      rect.width = 1;
+      rect.height = 1;
+
+      thunar_gtk_menu_run_at_event (GTK_MENU (menu), (GdkEvent *) event, &rect);
       return TRUE;
     }
   return FALSE;

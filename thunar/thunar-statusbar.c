@@ -194,7 +194,12 @@ thunar_statusbar_button_press_event (GtkWidget       *widget,
 {
   if (event->type == GDK_BUTTON_PRESS && event->button == 3)
     {
-      thunar_gtk_menu_run (GTK_MENU (thunar_statusbar_context_menu (statusbar)));
+      GdkRectangle rect;
+      rect.x = event->x;
+      rect.y = event->y;
+      rect.width = 1;
+      rect.height = 1;
+      thunar_gtk_menu_run (GTK_MENU (thunar_statusbar_context_menu (statusbar)), &rect);
       return TRUE;
     }
 

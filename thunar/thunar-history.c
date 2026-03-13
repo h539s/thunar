@@ -529,7 +529,8 @@ thunar_history_action_forward_nth (GtkWidget     *item,
 void
 thunar_history_show_menu (ThunarHistory        *history,
                           ThunarHistoryMenuType type,
-                          GtkWidget            *parent)
+                          GtkWidget            *parent,
+                          const GdkRectangle   *rect)
 {
   ThunarIconFactory *icon_factory;
   GtkIconTheme      *icon_theme;
@@ -623,7 +624,7 @@ thunar_history_show_menu (ThunarHistory        *history,
   g_object_unref (G_OBJECT (icon_factory));
 
   /* run the menu (takes over the floating of menu) */
-  thunar_gtk_menu_run (GTK_MENU (menu));
+  thunar_gtk_menu_run (GTK_MENU (menu), rect);
 }
 
 

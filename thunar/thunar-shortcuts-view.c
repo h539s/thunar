@@ -139,12 +139,14 @@ thunar_shortcuts_view_selection_func (GtkTreeSelection *selection,
 static void
 thunar_shortcuts_view_context_menu_visibility (ThunarShortcutsView *view,
                                                GdkEventButton      *event,
-                                               GtkTreeModel        *model);
+                                               GtkTreeModel        *model,
+                                               const GdkRectangle  *rect);
 static void
 thunar_shortcuts_view_context_menu (ThunarShortcutsView *view,
                                     GdkEventButton      *event,
                                     GtkTreeModel        *model,
-                                    GtkTreeIter         *iter);
+                                    GtkTreeIter         *iter,
+                                    const GdkRectangle  *rect);
 static gboolean
 thunar_shortcuts_view_remove_activated (ThunarShortcutsView *view,
                                         GtkWidget           *item);
@@ -647,7 +649,12 @@ thunar_shortcuts_view_button_press_event (GtkWidget      *widget,
           if (gtk_tree_model_get_iter (model, &iter, path))
             {
               /* popup the context menu */
-              thunar_shortcuts_view_context_menu (view, event, model, &iter);
+              GdkRectangle rect;
+              rect.x = event->x;
+              rect.y = event->y;
+              rect.width = 1;
+              rect.height = 1;
+              thunar_shortcuts_view_context_menu (view, event, model, &iter, &rect);
 
               /* we effectively handled the event */
               result = TRUE;
@@ -687,7 +694,12 @@ thunar_shortcuts_view_button_press_event (GtkWidget      *widget,
     }
   else if (event->button == 3)
     {
-      thunar_shortcuts_view_context_menu_visibility (view, event, model);
+      GdkRectangle rect;
+      rect.x = event->x;
+      rect.y = event->y;
+      rect.width = 1;
+      rect.height = 1;
+      thunar_shortcuts_view_context_menu_visibility (view, event, model, &rect);
       result = TRUE;
     }
 
@@ -850,7 +862,14 @@ thunar_shortcuts_view_drag_data_received (GtkWidget        *widget,
                         {
                           /* ask the user what to do with the drop data */
                           if (G_UNLIKELY (action == GDK_ACTION_ASK))
-                            action = thunar_dnd_ask (widget, file, view->drop_file_list, actions);
+                            {
+                              GdkRectangle rect;
+                              rect.x = x;
+                              rect.y = y;
+                              rect.width = 1;
+                              rect.height = 1;
+                              action = thunar_dnd_ask (widget, file, view->drop_file_list, actions, &rect);
+                            }
 
                           /* perform the requested action */
                           if (G_LIKELY (action != 0))
@@ -1102,8 +1121,11 @@ thunar_shortcuts_view_popup_menu (GtkWidget *widget)
   /* determine the selected row */
   if (gtk_tree_selection_get_selected (selection, &model, &iter))
     {
+      GdkRectangle rect;
+      gtk_widget_get_allocation (widget, &rect);
+
       /* popup the context menu */
-      thunar_shortcuts_view_context_menu (view, NULL, model, &iter);
+      thunar_shortcuts_view_context_menu (view, NULL, model, &iter, &rect);
       return TRUE;
     }
   else if (GTK_WIDGET_CLASS (thunar_shortcuts_view_parent_class)->popup_menu != NULL)
@@ -1178,7 +1200,8 @@ thunar_shortcuts_view_context_menu_visibility_toggled (GtkCheckMenuItem *item,
 static void
 thunar_shortcuts_view_context_menu_visibility (ThunarShortcutsView *view,
                                                GdkEventButton      *event,
-                                               GtkTreeModel        *model)
+                                               GtkTreeModel        *model,
+                                               const GdkRectangle  *rect)
 {
   GtkTreeIter         iter;
   guint               mask = 0;
@@ -1254,7 +1277,7 @@ thunar_shortcuts_view_context_menu_visibility (ThunarShortcutsView *view,
   gtk_tree_path_free (path);
 
   /* run the menu (taking over the floating reference on menu) */
-  thunar_gtk_menu_run (GTK_MENU (menu));
+  thunar_gtk_menu_run (GTK_MENU (menu), rect);
 }
 
 
@@ -1263,7 +1286,8 @@ static void
 thunar_shortcuts_view_context_menu (ThunarShortcutsView *view,
                                     GdkEventButton      *event,
                                     GtkTreeModel        *model,
-                                    GtkTreeIter         *iter)
+                                    GtkTreeIter         *iter,
+                                    const GdkRectangle  *rect)
 {
   GtkTreePath *path;
   ThunarFile  *file;
@@ -1281,7 +1305,7 @@ thunar_shortcuts_view_context_menu (ThunarShortcutsView *view,
   gtk_tree_model_get (model, iter, THUNAR_SHORTCUTS_MODEL_COLUMN_IS_HEADER, &is_header, -1);
   if (is_header)
     {
-      thunar_shortcuts_view_context_menu_visibility (view, event, model);
+      thunar_shortcuts_view_context_menu_visibility (view, event, model, rect);
       return;
     }
 
@@ -1388,7 +1412,7 @@ thunar_shortcuts_view_context_menu (ThunarShortcutsView *view,
   gtk_widget_show_all (GTK_WIDGET (context_menu));
   window = gtk_widget_get_toplevel (GTK_WIDGET (view));
   thunar_window_redirect_menu_tooltips_to_statusbar (THUNAR_WINDOW (window), GTK_MENU (context_menu));
-  thunar_gtk_menu_run (GTK_MENU (context_menu));
+  thunar_gtk_menu_run (GTK_MENU (context_menu), rect);
 
   /* return the focus to the current folder */
   thunar_shortcuts_view_select_by_file (view, view->current_directory);
