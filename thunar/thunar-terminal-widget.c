@@ -21,6 +21,7 @@
 
 #include "thunar-terminal-widget.h"
 
+#include "thunar-gtk-extensions.h"
 #include "thunar-navigator.h"
 #include "thunar-preferences.h"
 #include "thunar-private.h"
