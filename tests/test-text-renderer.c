@@ -8,6 +8,40 @@
 
 #include <gtk/gtk.h>
 
+static GtkCssProvider *css_provider = NULL;
+
+static void
+set_theme (const gchar *theme_name)
+{
+  GtkSettings *settings = gtk_settings_get_default ();
+  const gchar *test_srcdir = g_getenv ("G_TEST_SRCDIR");
+  g_autofree gchar *css_path = NULL;
+
+  if (test_srcdir == NULL)
+    test_srcdir = ".";
+
+  css_path = g_build_filename (test_srcdir, "themes", theme_name, "gtk-3.0", "gtk.css", NULL);
+
+  if (css_provider != NULL)
+    {
+      gtk_style_context_remove_provider_for_screen (gdk_screen_get_default (),
+                                                    GTK_STYLE_PROVIDER (css_provider));
+      g_object_unref (css_provider);
+      css_provider = NULL;
+    }
+
+  if (g_file_test (css_path, G_FILE_TEST_EXISTS))
+    {
+      css_provider = gtk_css_provider_new ();
+      gtk_css_provider_load_from_path (css_provider, css_path, NULL);
+      gtk_style_context_add_provider_for_screen (gdk_screen_get_default (),
+                                                 GTK_STYLE_PROVIDER (css_provider),
+                                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
+
+  g_object_set (settings, "gtk-theme-name", theme_name, NULL);
+}
+
 static void
 mock_cell_layout_data_func (GtkCellRenderer *cell,
                             const gchar     *highlight_bg,
@@ -49,7 +83,6 @@ run_test (const gchar *test_name,
           gboolean     window_active)
 {
   GtkCellRenderer *renderer = thunar_text_renderer_new ();
-  GtkSettings *settings = gtk_settings_get_default ();
   GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   cairo_surface_t *surface;
   cairo_t *cr;
@@ -57,7 +90,7 @@ run_test (const gchar *test_name,
   GdkRectangle background_area = { 0, 0, 200, 30 };
 
   /* Set theme */
-  g_object_set (settings, "gtk-theme-name", theme_name, NULL);
+  set_theme (theme_name);
 
   if (window_active)
     gtk_window_present (GTK_WINDOW (window));
@@ -95,7 +128,7 @@ run_test (const gchar *test_name,
 static void
 test_all_states (void)
 {
-  const gchar *themes[] = { "Adwaita", "Adwaita-dark" };
+  const gchar *themes[] = { "Adwaita", "Mint-L-Aqua" };
 
   for (guint i = 0; i < G_N_ELEMENTS (themes); i++)
     {
@@ -107,6 +140,7 @@ test_all_states (void)
       run_test (g_strdup_printf("%sfolder-highlight-both", prefix), theme, "Destaque Tudo", TRUE, "#FF0000", "#FFFF00", TRUE, 0, TRUE);
       run_test (g_strdup_printf("%sfolder-highlight-selected", prefix), theme, "Destaque Sel", TRUE, "#0000FF", "#FFFFFF", TRUE, GTK_CELL_RENDERER_SELECTED, TRUE);
       run_test (g_strdup_printf("%sfolder-backdrop", prefix), theme, "Backdrop", TRUE, "#FF0000", "#00FF00", TRUE, 0, FALSE);
+      run_test (g_strdup_printf("%sfolder-selected-backdrop", prefix), theme, "Backdrop", TRUE, NULL, NULL, TRUE, GTK_CELL_RENDERER_SELECTED, FALSE);
     }
 }
 
