@@ -605,6 +605,7 @@ thunar_chooser_dialog_context_menu (ThunarChooserDialog *dialog,
   GAppInfo         *app_info;
 
   _thunar_return_val_if_fail (THUNAR_IS_CHOOSER_DIALOG (dialog), FALSE);
+  _thunar_return_val_if_fail_rect (rect, FALSE);
 
   /* determine the selected row */
   selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (dialog->tree_view));

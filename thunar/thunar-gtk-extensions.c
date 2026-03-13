@@ -199,6 +199,8 @@ thunar_gtk_menu_run (GtkMenu            *menu,
 {
   GdkEvent *event = gtk_get_current_event ();
 
+  _thunar_return_if_fail_rect (rect);
+
   /* hide mnemonics in DnD menu by adding button-release-event parameters */
   if (event != NULL && event->type == GDK_DROP_START)
     {
@@ -217,74 +219,21 @@ thunar_gtk_menu_popup (GtkMenu            *menu,
                        GdkEvent           *event,
                        const GdkRectangle *rect)
 {
-  GdkWindow   *window;
-  GdkDevice   *device;
-  GdkDisplay  *display;
-  GdkSeat     *seat;
-  GdkRectangle pointer_rect = { 0, 0, 1, 1 };
+  GdkWindow *window;
 
-  /* fallback if event not set and no rect */
-  if (event == NULL && rect == NULL)
-    {
-      gtk_menu_popup_at_pointer (menu, event);
-      return;
-    }
+  _thunar_return_if_fail_rect (rect);
 
-  /* if we have a rect, we use it */
-  if (rect != NULL)
-    {
-      window = (event != NULL) ? gdk_event_get_window (event) : NULL;
-      if (window == NULL)
-        {
-          GtkWidget *widget = gtk_menu_get_attach_widget (menu);
-          if (widget != NULL)
-            window = gtk_widget_get_window (widget);
-        }
-
-      gtk_menu_popup_at_rect (menu,
-                              window,
-                              rect,
-                              GDK_GRAVITY_SOUTH_EAST,
-                              GDK_GRAVITY_NORTH_WEST,
-                              event);
-      return;
-    }
-
-  /* create popup rect from pointer */
   window = (event != NULL) ? gdk_event_get_window (event) : NULL;
-  if (window != NULL)
+  if (window == NULL)
     {
-      device = gdk_event_get_device (event);
-
-      if (device != NULL && gdk_device_get_source (device) == GDK_SOURCE_KEYBOARD)
-        device = gdk_device_get_associated_device (device);
-
-      if (device != NULL)
-        {
-          /* Ensure that we have the toplevel window to work around a GTK3 Wayland bug
-           * that prevents the user from dismissing the menu via click in some cases.
-           * See: https://gitlab.xfce.org/xfce/thunar/-/issues/1592 */
-          window = gdk_window_get_toplevel (window);
-
-          gdk_window_get_device_position (window, device, &pointer_rect.x, &pointer_rect.y, NULL);
-        }
-
-      /* fallback needed for right-click DnD from xfdesktop to Thunar */
-      if (device == NULL)
-        {
-          display = gdk_window_get_display (window);
-          seat = gdk_display_get_default_seat (display);
-          device = gdk_seat_get_pointer (seat);
-
-          gdk_device_get_position (device, NULL, &pointer_rect.x, &pointer_rect.y);
-          window = gdk_device_get_window_at_position (device, &pointer_rect.x, &pointer_rect.y);
-        }
+      GtkWidget *widget = gtk_menu_get_attach_widget (menu);
+      if (widget != NULL)
+        window = gtk_widget_get_window (widget);
     }
 
-  /* pop up the menu at the rectangle below the mouse cursor */
   gtk_menu_popup_at_rect (menu,
                           window,
-                          &pointer_rect,
+                          rect,
                           GDK_GRAVITY_SOUTH_EAST,
                           GDK_GRAVITY_NORTH_WEST,
                           event);
@@ -315,6 +264,7 @@ thunar_gtk_menu_run_at_event (GtkMenu            *menu,
   gulong     signal_id;
 
   _thunar_return_if_fail (GTK_IS_MENU (menu));
+  _thunar_return_if_fail_rect (rect);
 
   /* take over the floating reference on the menu */
   g_object_ref_sink (G_OBJECT (menu));

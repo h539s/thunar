@@ -2879,6 +2879,8 @@ thunar_window_notebook_popup_menu (GtkWidget          *notebook,
 {
   GtkWidget *menu;
 
+  _thunar_return_val_if_fail_rect (rect, FALSE);
+
   menu = gtk_menu_new ();
   gtk_menu_set_accel_group (GTK_MENU (menu), window->accel_group);
   xfce_gtk_menu_item_new_from_action_entry (get_action_entry (THUNAR_WINDOW_ACTION_NEW_TAB), G_OBJECT (window), GTK_MENU_SHELL (menu));

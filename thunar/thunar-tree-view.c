@@ -1304,6 +1304,8 @@ thunar_tree_view_context_menu (ThunarTreeView     *view,
                                const GdkRectangle *rect)
 {
   ThunarDevice *device;
+
+  _thunar_return_if_fail_rect (rect);
   ThunarFile   *file;
   GList        *files;
   ThunarMenu   *context_menu;

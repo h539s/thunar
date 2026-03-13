@@ -65,6 +65,8 @@ thunar_dnd_ask (GtkWidget          *widget,
                 const GdkRectangle *rect)
 {
   static const GdkDragAction dnd_action_items[] = { GDK_ACTION_COPY, GDK_ACTION_MOVE, GDK_ACTION_LINK };
+
+  _thunar_return_val_if_fail_rect (rect, 0);
   static const gchar        *dnd_action_names[] = { N_ ("Copy _Here"), N_ ("_Move Here"), N_ ("_Link Here") };
   static const gchar        *dnd_action_icons[] = { "stock_folder-copy", "stock_folder-move", "insert-link" };
 

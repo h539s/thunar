@@ -926,6 +926,7 @@ thunar_renamer_dialog_context_menu (ThunarRenamerDialog *renamer_dialog,
   GList          *lp = NULL;
 
   _thunar_return_if_fail (THUNAR_IS_RENAMER_DIALOG (renamer_dialog));
+  _thunar_return_if_fail_rect (rect);
 
   /* grab an additional reference on the dialog */
   g_object_ref (G_OBJECT (renamer_dialog));

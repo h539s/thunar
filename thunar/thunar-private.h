@@ -32,11 +32,15 @@ G_BEGIN_DECLS;
 #define _thunar_assert_not_reached()          g_assert_not_reached ()
 #define _thunar_return_if_fail(expr)          g_return_if_fail (expr)
 #define _thunar_return_val_if_fail(expr, val) g_return_val_if_fail (expr, (val))
+#define _thunar_return_if_fail_rect(expr)          g_return_if_fail (expr != NULL)
+#define _thunar_return_val_if_fail_rect(expr, val) g_return_val_if_fail (expr != NULL, (val))
 #else
 #define _thunar_assert(expr)                  G_STMT_START{ (void)0; }G_STMT_END
 #define _thunar_assert_not_reached()          G_STMT_START{ (void)0; }G_STMT_END
 #define _thunar_return_if_fail(expr)          G_STMT_START{ (void)0; }G_STMT_END
 #define _thunar_return_val_if_fail(expr, val) G_STMT_START{ (void)0; }G_STMT_END
+#define _thunar_return_if_fail_rect(expr)          G_STMT_START{ (void)0; }G_STMT_END
+#define _thunar_return_val_if_fail_rect(expr, val) G_STMT_START{ (void)0; }G_STMT_END
 #endif
 
 /* avoid trivial g_value_get_*() function calls */

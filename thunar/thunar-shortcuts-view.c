@@ -1204,6 +1204,8 @@ thunar_shortcuts_view_context_menu_visibility (ThunarShortcutsView *view,
                                                const GdkRectangle  *rect)
 {
   GtkTreeIter         iter;
+
+  _thunar_return_if_fail_rect (rect);
   guint               mask = 0;
   ThunarShortcutGroup group;
   GtkWidget          *menu;
@@ -1290,6 +1292,8 @@ thunar_shortcuts_view_context_menu (ThunarShortcutsView *view,
                                     const GdkRectangle  *rect)
 {
   GtkTreePath *path;
+
+  _thunar_return_if_fail_rect (rect);
   ThunarFile  *file;
   GtkWidget   *item;
   GtkWidget   *window;

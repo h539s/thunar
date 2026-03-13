@@ -4445,6 +4445,7 @@ thunar_standard_view_context_menu (ThunarStandardView *standard_view,
   GList      *selected_items;
 
   _thunar_return_if_fail (THUNAR_IS_STANDARD_VIEW (standard_view));
+  _thunar_return_if_fail_rect (rect);
 
   /* grab an additional reference on the view */
   g_object_ref (G_OBJECT (standard_view));
