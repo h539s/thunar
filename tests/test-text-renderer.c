@@ -38,6 +38,10 @@ set_theme (const gchar *theme_name)
                                                  GTK_STYLE_PROVIDER (css_provider),
                                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     }
+  else
+    {
+      g_error ("Theme CSS file not found: %s", css_path);
+    }
 
   g_object_set (settings, "gtk-theme-name", theme_name, NULL);
 }
