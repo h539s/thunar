@@ -43,6 +43,10 @@ thunar_gtk_menu_run_at_widget (GtkMenu  *menu,
                                 GtkWidget *widget,
                               GdkEvent *event);
 void
+thunar_gtk_menu_run_at_rect (GtkMenu            *menu,
+                             GtkWidget          *window,
+                             const GdkRectangle *rect);
+void
 thunar_gtk_menu_loop (GtkMenu *menu);
 void
 thunar_gtk_menu_hide_accel_labels (GtkMenu *menu);
