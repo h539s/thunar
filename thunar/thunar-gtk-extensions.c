@@ -288,6 +288,30 @@ thunar_gtk_menu_run_at_event (GtkMenu  *menu,
 }
 
 /**
+ * thunar_gtk_menu_run_at_widget:
+ * @menu  : a #GtkMenu.
+ * @widget : a #GtkWidget to position the menu at.
+ * @event : a #GdkEvent which may be NULL if no previous event was stored.
+ *
+ * A simple wrapper around thunar_menu_loop(), which position menu at widget.
+ *
+ **/
+void
+thunar_gtk_menu_run_at_widget (GtkMenu  *menu,
+                                GtkWidget *widget,
+                              GdkEvent *event)
+{
+  gtk_menu_popup_at_widget (menu,
+                          widget,
+                          GDK_GRAVITY_SOUTH_EAST,
+                          GDK_GRAVITY_NORTH_WEST,
+                          event);
+  gtk_menu_reposition (menu);
+  gtk_grab_add (GTK_WIDGET (menu));
+  thunar_gtk_menu_loop (menu);
+}
+
+/**
  * thunar_menu_loop:
  * @menu  : a #GtkMenu.
  *
