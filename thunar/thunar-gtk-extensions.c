@@ -274,7 +274,24 @@ thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
  * @menu  : a #GtkMenu.
  * @event : a #GdkEvent which may be NULL if no previous event was stored.
  *
- * A simple wrapper around gtk_menu_popup_at_pointer(), which runs the @menu in a separate
+ * A simple wrapper around thunar_menu_loop(), which position menu at pointer.
+ *
+ **/
+void
+thunar_gtk_menu_run_at_event (GtkMenu  *menu,
+                              GdkEvent *event)
+{
+  thunar_gtk_menu_popup_at_pointer (menu, event);
+  gtk_menu_reposition (menu);
+  gtk_grab_add (GTK_WIDGET (menu));
+  thunar_gtk_menu_loop (menu);
+}
+
+/**
+ * thunar_menu_loop:
+ * @menu  : a #GtkMenu.
+ *
+ * A simple wrapper which runs the @menu in a separate
  * main loop and returns only after the @menu was deactivated.
  *
  * This method automatically takes over the floating reference of @menu if any and
@@ -283,8 +300,7 @@ thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
  *
  **/
 void
-thunar_gtk_menu_run_at_event (GtkMenu  *menu,
-                              GdkEvent *event)
+thunar_gtk_menu_loop (GtkMenu *menu)
 {
   GMainLoop *loop;
   gulong     signal_id;
@@ -297,9 +313,6 @@ thunar_gtk_menu_run_at_event (GtkMenu  *menu,
   /* run an internal main loop */
   loop = g_main_loop_new (NULL, FALSE);
   signal_id = g_signal_connect_swapped (G_OBJECT (menu), "deactivate", G_CALLBACK (g_main_loop_quit), loop);
-  thunar_gtk_menu_popup_at_pointer (menu, event);
-  gtk_menu_reposition (menu);
-  gtk_grab_add (GTK_WIDGET (menu));
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
   gtk_grab_remove (GTK_WIDGET (menu));
