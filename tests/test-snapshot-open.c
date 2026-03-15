@@ -1,4 +1,4 @@
-#include "tests/thunar-test-utils.h"
+#include "thunar/thunar-test-utils.h"
 #include "tests/thunar-test-snapshots.h"
 #include "tests/thunar-test-control.h"
 
@@ -15,7 +15,7 @@ thunar_test_run (gpointer data)
 
   thunar_test_setup_window (window);
 
-  take_screenshot_and_compare (window, "open");
+  take_snapshot_and_compare (window, "open");
 
   return FALSE;
 }

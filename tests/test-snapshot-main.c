@@ -11,7 +11,7 @@
 #include "thunar/thunar-preferences.h"
 #include "thunar/thunar-private.h"
 #include "thunar/thunar-session-client.h"
-#include "tests/thunar-test-utils.h"
+#include "thunar/thunar-test-utils.h"
 
 static void
 window_added (GtkApplication *app,

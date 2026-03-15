@@ -6,7 +6,6 @@
 #include <string.h>
 
 #define SNAPSHOTS_DIR "snapshots"
-#define ERROR_PREFIX "err_"
 
 static gchar *
 get_snapshots_dir (void)
@@ -49,15 +48,15 @@ compare_pixbufs (GdkPixbuf *pb1, GdkPixbuf *pb2)
 }
 
 void
-take_screenshot_and_compare (GtkWindow *window, const gchar *test_case)
+take_snapshot_and_compare (GtkWindow *window, const gchar *test_case)
 {
   GdkWindow *gdk_window;
-  GdkPixbuf *screenshot;
+  GdkPixbuf *snapshot;
   GError    *error = NULL;
   gchar     *reference_path;
   gchar     *error_path;
 
-  g_print ("Thunar Test [%s]: Taking screenshot...\n", test_case);
+  g_print ("Thunar Test [%s]: Taking snapshot...\n", test_case);
 
   gdk_window = gdk_get_default_root_window ();
   if (gdk_window == NULL)
@@ -66,13 +65,13 @@ take_screenshot_and_compare (GtkWindow *window, const gchar *test_case)
       return;
     }
 
-  screenshot = gdk_pixbuf_get_from_window (gdk_window, 0, 0,
+  snapshot = gdk_pixbuf_get_from_window (gdk_window, 0, 0,
                                            gdk_screen_get_width (gdk_screen_get_default ()),
                                            gdk_screen_get_height (gdk_screen_get_default ()));
 
-  if (screenshot == NULL)
+  if (snapshot == NULL)
     {
-      g_warning ("Thunar Test [%s]: Failed to capture screenshot", test_case);
+      g_warning ("Thunar Test [%s]: Failed to capture snapshot", test_case);
       return;
     }
 
@@ -85,7 +84,7 @@ take_screenshot_and_compare (GtkWindow *window, const gchar *test_case)
   if (!g_file_test (reference_path, G_FILE_TEST_EXISTS))
     {
       g_print ("Thunar Test [%s]: Reference image not found. Creating reference...\n", test_case);
-      if (!gdk_pixbuf_save (screenshot, reference_path, "png", &error, NULL))
+      if (!gdk_pixbuf_save (snapshot, reference_path, "png", &error, NULL))
         {
           g_warning ("Thunar Test [%s]: Failed to save reference image: %s", test_case, error->message);
           g_clear_error (&error);
@@ -101,15 +100,15 @@ take_screenshot_and_compare (GtkWindow *window, const gchar *test_case)
         }
       else
         {
-          if (compare_pixbufs (screenshot, reference))
+          if (compare_pixbufs (snapshot, reference))
             {
-              g_print ("Thunar Test [%s]: Screenshot matches reference. Success!\n", test_case);
+              g_print ("Thunar Test [%s]: Snapshot matches reference. Success!\n", test_case);
             }
           else
             {
-              error_path = g_build_filename (snapshots_dir, g_strconcat (ERROR_PREFIX, test_case, ".png", NULL), NULL);
-              g_print ("Thunar Test [%s]: Screenshot DOES NOT match reference. Saving as %s\n", test_case, error_path);
-              if (!gdk_pixbuf_save (screenshot, error_path, "png", &error, NULL))
+              error_path = g_build_filename (snapshots_dir, g_strconcat (test_case, "_err.png", NULL), NULL);
+              g_print ("Thunar Test [%s]: Snapshot DOES NOT match reference. Saving as %s\n", test_case, error_path);
+              if (!gdk_pixbuf_save (snapshot, error_path, "png", &error, NULL))
                 {
                   g_warning ("Thunar Test [%s]: Failed to save error image: %s", test_case, error->message);
                   g_clear_error (&error);
@@ -123,7 +122,7 @@ take_screenshot_and_compare (GtkWindow *window, const gchar *test_case)
 
   g_free (reference_path);
   g_free (snapshots_dir);
-  g_object_unref (screenshot);
+  g_object_unref (snapshot);
 
   g_print ("Thunar Test [%s]: Completed. Closing Thunar...\n", test_case);
   g_application_quit (g_application_get_default ());

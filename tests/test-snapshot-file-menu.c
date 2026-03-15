@@ -1,4 +1,4 @@
-#include "tests/thunar-test-utils.h"
+#include "thunar/thunar-test-utils.h"
 #include "tests/thunar-test-snapshots.h"
 #include "tests/thunar-test-control.h"
 #include "thunar/thunar-preferences.h"
@@ -6,7 +6,7 @@
 static gboolean
 thunar_test_file_menu_step2 (gpointer data)
 {
-  take_screenshot_and_compare (GTK_WINDOW (data), "file_menu");
+  take_snapshot_and_compare (GTK_WINDOW (data), "file_menu");
   return FALSE;
 }
 
