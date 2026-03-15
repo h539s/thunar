@@ -152,7 +152,7 @@ thunar_tree_view_row_collapsed (GtkTreeView *tree_view,
                                 GtkTreePath *path);
 static gboolean
 thunar_tree_view_delete_selected_files (ThunarTreeView *view);
-static void
+static ThunarMenu *
 thunar_tree_view_context_menu (ThunarTreeView *view,
                                GtkTreeModel   *model,
                                GtkTreeIter    *iter);
@@ -725,6 +725,8 @@ thunar_tree_view_button_press_event (GtkWidget      *widget,
   GtkTreePath       *path;
   GtkTreeIter        iter;
   gboolean           result;
+  ThunarMenu         *context_menu;
+  GdkRectangle       rect;
 
   /* reset the pressed button state */
   view->pressed_button = -1;
@@ -756,8 +758,9 @@ thunar_tree_view_button_press_event (GtkWidget      *widget,
           /* determine the iterator for the path */
           if (gtk_tree_model_get_iter (GTK_TREE_MODEL (view->model), &iter, path))
             {
+              context_menu = thunar_tree_view_context_menu (view, GTK_TREE_MODEL (view->model), &iter);
               /* popup the context menu */
-              thunar_tree_view_context_menu (view, GTK_TREE_MODEL (view->model), &iter);
+              thunar_gtk_menu_run_at_event (GTK_MENU (context_menu), (GdkEvent *) event);
 
               /* we effectively handled the event */
               result = TRUE;
@@ -765,7 +768,6 @@ thunar_tree_view_button_press_event (GtkWidget      *widget,
         }
       else if (event->button == 1)
         {
-          GdkRectangle rect;
           gtk_tree_view_get_cell_area (GTK_TREE_VIEW (widget), path, column, &rect);
 
           /* set cursor only when the user did not click the expander */
@@ -1152,13 +1154,18 @@ thunar_tree_view_popup_menu (GtkWidget *widget)
   ThunarTreeView   *view = THUNAR_TREE_VIEW (widget);
   GtkTreeModel     *model;
   GtkTreeIter       iter;
+  ThunarMenu       *context_menu;
+  GdkRectangle      rect;
 
   /* determine the selected row */
   selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (view));
   if (gtk_tree_selection_get_selected (selection, &model, &iter))
     {
-      /* popup the context menu */
-      thunar_tree_view_context_menu (view, model, &iter);
+      GtkTreePath *path = gtk_tree_model_get_path(model, &iter);
+      gtk_tree_view_get_cell_area (GTK_TREE_VIEW (view), path, NULL, &rect);
+      gtk_tree_path_free (path);
+      context_menu = thunar_tree_view_context_menu (view, model, &iter);
+      thunar_gtk_menu_run_at_rect (GTK_MENU (context_menu), GTK_WIDGET (view), &rect);
       return TRUE;
     }
   else if (GTK_WIDGET_CLASS (thunar_tree_view_parent_class)->popup_menu != NULL)
@@ -1275,7 +1282,7 @@ thunar_tree_view_delete_selected_files (ThunarTreeView *view)
 
 
 
-static void
+static ThunarMenu *
 thunar_tree_view_context_menu (ThunarTreeView *view,
                                GtkTreeModel   *model,
                                GtkTreeIter    *iter)
@@ -1286,10 +1293,6 @@ thunar_tree_view_context_menu (ThunarTreeView *view,
   ThunarMenu   *context_menu;
   GtkWidget    *window;
   gboolean      file_is_available;
-
-  /* verify that we're connected to the clipboard manager */
-  if (G_UNLIKELY (view->clipboard == NULL))
-    return;
 
   /* determine the file and device for the given iter */
   gtk_tree_model_get (model, iter,
@@ -1346,13 +1349,13 @@ thunar_tree_view_context_menu (ThunarTreeView *view,
   gtk_widget_show_all (GTK_WIDGET (context_menu));
   window = gtk_widget_get_toplevel (GTK_WIDGET (view));
   thunar_window_redirect_menu_tooltips_to_statusbar (THUNAR_WINDOW (window), GTK_MENU (context_menu));
-  thunar_gtk_menu_run (GTK_MENU (context_menu));
 
   /* cleanup */
   if (G_UNLIKELY (device != NULL))
     g_object_unref (G_OBJECT (device));
   if (G_LIKELY (file != NULL))
     g_object_unref (G_OBJECT (file));
+  return context_menu;
 }
 
 
