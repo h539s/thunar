@@ -1,8 +1,5 @@
-
-#include "tests/thunar-test-utils.h"
-#include "thunar/thunar-preferences.h"
+#include "tests/thunar-test-snapshots.h"
 #include <gdk/gdk.h>
-#include <gdk/gdktestutils.h>
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <stdlib.h>
@@ -51,7 +48,7 @@ compare_pixbufs (GdkPixbuf *pb1, GdkPixbuf *pb2)
   return TRUE;
 }
 
-static void
+void
 take_screenshot_and_compare (GtkWindow *window, const gchar *test_case)
 {
   GdkWindow *gdk_window;
@@ -130,101 +127,4 @@ take_screenshot_and_compare (GtkWindow *window, const gchar *test_case)
 
   g_print ("Thunar Test [%s]: Completed. Closing Thunar...\n", test_case);
   g_application_quit (g_application_get_default ());
-}
-
-static gboolean
-thunar_test_file_menu_step2 (gpointer data)
-{
-  take_screenshot_and_compare (GTK_WINDOW (data), "file_menu");
-  return FALSE;
-}
-
-static void
-find_file_menu_and_click (GtkWidget *widget, gpointer data)
-{
-  GtkWidget **file_menu_item = (GtkWidget **) data;
-  if (*file_menu_item != NULL)
-    return;
-
-  if (GTK_IS_MENU_ITEM (widget))
-    {
-      const gchar *label = gtk_menu_item_get_label (GTK_MENU_ITEM (widget));
-      /* We can also check the action name if available. */
-      if (label && (strstr (label, "File") || strstr (label, "Arquivo")))
-        {
-          *file_menu_item = widget;
-          return;
-        }
-    }
-
-  if (GTK_IS_CONTAINER (widget))
-    gtk_container_foreach (GTK_CONTAINER (widget), find_file_menu_and_click, data);
-}
-
-gboolean
-thunar_test_run (gpointer data)
-{
-  GtkWindow   *window = GTK_WINDOW (data);
-  const gchar *test_case = g_getenv ("THUNAR_TEST_CASE");
-
-  if (test_case == NULL)
-    test_case = "open";
-
-  if (!gtk_widget_get_visible (GTK_WIDGET (window)))
-    return TRUE;
-
-  if (gtk_widget_get_window (GTK_WIDGET (window)) == NULL)
-    return TRUE;
-
-  gtk_window_unmaximize (window);
-  gtk_window_resize (window, 800, 600);
-  gtk_window_move (window, 0, 0);
-
-  if (g_strcmp0 (test_case, "open") == 0)
-    {
-      take_screenshot_and_compare (window, "open");
-      return FALSE;
-    }
-  else if (g_strcmp0 (test_case, "file_menu") == 0)
-    {
-      GtkWidget *file_menu_item = NULL;
-      GtkWidget *titlebar;
-
-      /* Standardize the view: ensure the menubar is visible */
-      g_object_set (thunar_preferences_get (), "last-menubar-visible", TRUE, NULL);
-
-      gtk_container_foreach (GTK_CONTAINER (window), find_file_menu_and_click, &file_menu_item);
-
-      if (file_menu_item == NULL)
-        {
-          titlebar = gtk_window_get_titlebar (window);
-          if (titlebar)
-            gtk_container_foreach (GTK_CONTAINER (titlebar), find_file_menu_and_click, &file_menu_item);
-        }
-
-      if (file_menu_item)
-        {
-          GtkWidget *menubar = gtk_widget_get_parent (file_menu_item);
-          if (menubar)
-            gtk_widget_show_all (menubar);
-
-          gtk_window_present (window);
-          gtk_widget_grab_focus (file_menu_item);
-
-          g_print ("Thunar Test [file_menu]: Activating File menu\n");
-          gtk_menu_item_select (GTK_MENU_ITEM (file_menu_item));
-          gtk_menu_item_activate (GTK_MENU_ITEM (file_menu_item));
-
-          /* Wait a bit for the menu to open and render */
-          g_timeout_add (1000, thunar_test_file_menu_step2, window);
-        }
-      else
-        {
-          g_warning ("Thunar Test [file_menu]: Could not find File menu item");
-          g_application_quit (g_application_get_default ());
-        }
-      return FALSE;
-    }
-
-  return TRUE;
 }
