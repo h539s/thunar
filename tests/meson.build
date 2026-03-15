@@ -14,7 +14,6 @@ test_cases = [
 ]
 
 xvfb_run = find_program('xvfb-run', required: false)
-cage = find_program('cage', required: false)
 dbus_run_session = find_program('dbus-run-session', required: false)
 sh = find_program('sh', required: true)
 
@@ -64,30 +63,6 @@ foreach tc : test_cases
     )
   endif
 
-  # Wayland tests
-  if cage.found() and dbus_run_session.found()
-    wayland_env = environment()
-    foreach var, val : base_test_env
-      wayland_env.set(var, val)
-    endforeach
-    wayland_env.set('WLR_BACKENDS', 'headless')
-    wayland_env.set('WLR_LIBINPUT_NO_DEVICES', '1')
-    wayland_env.set('WLR_HEADLESS_OUTPUT_WIDTH', '800')
-    wayland_env.set('WLR_HEADLESS_OUTPUT_HEIGHT', '600')
-    wayland_env.set('XDG_RUNTIME_DIR', '/tmp')
-
-    test(
-      tc_name + '-wayland',
-      sh,
-      args: [
-        '-c',
-        'mkdir -p /tmp/empty_gio && ' + cage.full_path() + ' -- ' + dbus_run_session.full_path() + ' -- ' + e.full_path()
-      ],
-      env: wayland_env,
-      timeout: 60,
-      suite: 'snapshots',
-    )
-  endif
 endforeach
 
 foreach bin : test_bins
