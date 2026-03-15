@@ -22,6 +22,8 @@ base_test_env = {
   'USER': 'user',
   'HOME': meson.current_source_dir() / 'home_env',
   'GTK_THEME': 'Adwaita',
+  'ICON_THEME': 'Adwaita',
+  'GTK_ICON_THEME_NAME': 'Adwaita',
   'LIBGL_ALWAYS_SOFTWARE': '1',
   'GIO_USE_VFS': 'local',
   'GIO_USE_VOLUME_MONITOR': 'unix',
