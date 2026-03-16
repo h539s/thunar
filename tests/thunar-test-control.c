@@ -5,6 +5,7 @@ void
 thunar_test_setup_window (GtkWindow *window)
 {
   gtk_window_maximize (window);
+  gtk_window_resize (window, 800, 600);
 }
 
 void

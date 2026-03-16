@@ -2,6 +2,13 @@
 #include "tests/thunar-test-snapshots.h"
 #include "tests/thunar-test-control.h"
 
+static gboolean
+thunar_test_open_step2 (gpointer data)
+{
+  take_snapshot_and_compare (GTK_WINDOW (data), "open");
+  return FALSE;
+}
+
 gboolean
 thunar_test_run (gpointer data)
 {
@@ -15,7 +22,8 @@ thunar_test_run (gpointer data)
 
   thunar_test_setup_window (window);
 
-  take_snapshot_and_compare (window, "open");
+  /* Wait a bit for the window to maximize and render */
+  g_timeout_add (1000, thunar_test_open_step2, window);
 
   return FALSE;
 }
