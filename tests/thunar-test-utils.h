@@ -1,4 +1,3 @@
-
 #ifndef __THUNAR_TEST_UTILS_H__
 #define __THUNAR_TEST_UTILS_H__
 

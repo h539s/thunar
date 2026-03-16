@@ -5,7 +5,7 @@
 
 G_BEGIN_DECLS
 
-void take_screenshot_and_compare (GtkWindow *window, const gchar *test_case);
+void take_snapshot_and_compare (GtkWindow *window, const gchar *test_case);
 
 G_END_DECLS
 
