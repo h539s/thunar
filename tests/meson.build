@@ -20,6 +20,7 @@ sh = find_program('sh', required: true)
 
 # Base environment variables
 base_test_env = {
+  'LANG': 'C.UTF-8',
   'USER': 'user',
   'HOME': meson.current_source_dir() / 'home_env',
   'GTK_THEME': 'Adwaita',
