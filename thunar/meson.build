@@ -79,6 +79,7 @@ thunar_sources = [
   'thunar-job-operation.h',
   'thunar-job.c',
   'thunar-job.h',
+  '../tests/thunar-job-control.c',
   'thunar-location-bar.c',
   'thunar-location-bar.h',
   'thunar-location-button.c',
@@ -222,6 +223,7 @@ thunar_dependencies = [
 thunar_c_args = [
     '-DG_LOG_DOMAIN="@0@"'.format('thunar'),
     '-D_XOPEN_SOURCE=700', # for strptime in time.h
+    '-DTHUNAR_JOB_CONTROL',
 ]
 
 libthunar = static_library(

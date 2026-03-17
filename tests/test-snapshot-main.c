@@ -13,6 +13,16 @@
 #include "thunar/thunar-session-client.h"
 #include "thunar/thunar-test-utils.h"
 
+#ifdef THUNAR_JOB_CONTROL
+#include "tests/thunar-job-control.h"
+
+static void
+job_control_ready (void)
+{
+  g_print ("Job control: all jobs finished, proceeding with test...\n");
+}
+#endif
+
 static void
 window_added (GtkApplication *app,
               GtkWindow      *window,
@@ -53,6 +63,10 @@ main (int argc, char **argv)
 
   /* acquire a reference on the global application */
   application = thunar_application_get ();
+
+#ifdef THUNAR_JOB_CONTROL
+  thunar_job_control_set_callback (job_control_ready);
+#endif
 
   g_signal_connect (application, "window-added", G_CALLBACK (window_added), NULL);
 

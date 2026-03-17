@@ -31,6 +31,7 @@
 
 G_BEGIN_DECLS;
 
+
 typedef struct _ThunarApplicationClass ThunarApplicationClass;
 typedef struct _ThunarApplication      ThunarApplication;
 
@@ -202,6 +203,7 @@ thunar_application_restore_files (ThunarApplication *application,
 
 ThunarThumbnailCache *
 thunar_application_get_thumbnail_cache (ThunarApplication *application);
+
 
 gboolean
 thunar_application_accel_map_init (ThunarApplication *application);

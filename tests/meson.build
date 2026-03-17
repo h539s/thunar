@@ -6,6 +6,7 @@ test_snapshot_common_sources = [
   'test-snapshot-main.c',
   'thunar-test-snapshots.c',
   'thunar-test-control.c',
+  'thunar-job-control.c',
 ]
 
 test_cases = [
@@ -36,7 +37,7 @@ foreach tc : test_cases
   e = executable(
     tc_name,
     sources: test_snapshot_common_sources + [tc_name + '.c'],
-    c_args: thunar_c_args + ['-UG_DISABLE_ASSERT', '-DTHUNAR_TEST_SNAPSHOT'],
+    c_args: thunar_c_args + ['-UG_DISABLE_ASSERT', '-DTHUNAR_TEST_SNAPSHOT', '-DTHUNAR_JOB_CONTROL'],
     include_directories: [
       include_directories('..'),
     ],

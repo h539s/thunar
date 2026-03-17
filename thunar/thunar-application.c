@@ -65,6 +65,10 @@
 #include "thunar/thunar-util.h"
 #include "thunar/thunar-view.h"
 
+#ifdef THUNAR_JOB_CONTROL
+#include "tests/thunar-job-control.h"
+#endif
+
 #include <libxfce4ui/libxfce4ui.h>
 #include <libxfce4util/libxfce4util.h>
 
@@ -257,6 +261,7 @@ struct _ThunarApplication
 
   guint dbus_owner_id_xfce;
   guint dbus_owner_id_fdo;
+
 };
 
 
@@ -321,6 +326,10 @@ thunar_application_init (ThunarApplication *application)
 {
   /* we do most initialization in GApplication::startup since it is only needed
    * in the primary instance anyways */
+
+#ifdef THUNAR_JOB_CONTROL
+  thunar_job_control_setup ();
+#endif
 
   application->force_new_window = FALSE;
   application->files_to_launch = NULL;
@@ -433,6 +442,10 @@ static void
 thunar_application_shutdown (GApplication *gapp)
 {
   ThunarApplication *application = THUNAR_APPLICATION (gapp);
+
+#ifdef THUNAR_JOB_CONTROL
+  thunar_job_control_shutdown ();
+#endif
 
   /* unqueue all files waiting to be processed */
   thunar_g_list_free_full (application->files_to_launch);
@@ -3068,6 +3081,9 @@ handle_exit (gint     sig,
   /* Use conventional Unix exit code when program terminates in respond to a signal. */
   exit ((int) sig + 128);
 }
+
+
+
 
 
 

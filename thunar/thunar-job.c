@@ -32,6 +32,10 @@
 
 #include <libxfce4util/libxfce4util.h>
 
+#ifdef THUNAR_JOB_CONTROL
+#include "tests/thunar-job-control.h"
+#endif
+
 
 
 /* Signal identifiers */
@@ -580,6 +584,10 @@ thunar_job_finished (ThunarJob *job)
 {
   _thunar_return_if_fail (THUNAR_IS_JOB (job));
   g_signal_emit (job, job_signals[FINISHED], 0);
+
+#ifdef THUNAR_JOB_CONTROL
+  thunar_job_control_decrement ();
+#endif
 }
 
 
@@ -604,6 +612,10 @@ thunar_job_launch (ThunarJob *job)
 
   /* mark the job as running */
   job->priv->running = TRUE;
+
+#ifdef THUNAR_JOB_CONTROL
+  thunar_job_control_increment ();
+#endif
 
   job->priv->context = g_main_context_ref_thread_default ();
 
