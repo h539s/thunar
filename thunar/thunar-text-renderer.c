@@ -18,6 +18,7 @@
  */
 
 #include "thunar/thunar-text-renderer.h"
+#include "thunar/thunar-file.h"
 #include "thunar/thunar-util.h"
 
 
@@ -25,9 +26,7 @@
 enum
 {
   PROP_0,
-  PROP_HIGHLIGHT_COLOR,
-  PROP_ROUNDED_CORNERS,
-  PROP_HIGHLIGHTING_ENABLED,
+  PROP_FILE,
 };
 
 
@@ -70,9 +69,7 @@ struct _ThunarTextRenderer
 {
   GtkCellRendererText __parent__;
 
-  gchar   *highlight_color;
-  gboolean rounded_corners;
-  gboolean highlighting_enabled;
+  ThunarFile *file;
 };
 
 
@@ -96,42 +93,15 @@ thunar_text_renderer_class_init (ThunarTextRendererClass *klass)
   cell_class->render = thunar_text_renderer_render;
 
   /**
-   * ThunarTextRenderer:highlight-color:
+   * ThunarTextRenderer:file:
    *
-   * The color with which the cell should be highlighted.
+   * The file whose text to render.
    **/
   g_object_class_install_property (object_class,
-                                   PROP_HIGHLIGHT_COLOR,
-                                   g_param_spec_string ("highlight-color", "highlight-color", "highlight-color",
-                                                        NULL,
+                                   PROP_FILE,
+                                   g_param_spec_object ("file", "file", "file",
+                                                        THUNAR_TYPE_FILE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-
-
-  /**
-   * ThunarTextRenderer:rounded-corners:
-   *
-   * Determines if the cell should be clipped to rounded corners.
-   * Useful when highlighting is enabled & a highlight color is set.
-   **/
-  g_object_class_install_property (object_class,
-                                   PROP_ROUNDED_CORNERS,
-                                   g_param_spec_boolean ("rounded-corners", "rounded-corners", "rounded-corners",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-
-
-  /**
-   * ThunarTextRenderer:highlighting-enabled:
-   *
-   * Determines if the cell background should be drawn with highlight color.
-   **/
-  g_object_class_install_property (object_class,
-                                   PROP_HIGHLIGHTING_ENABLED,
-                                   g_param_spec_boolean ("highlighting-enabled", "highlighting-enabled", "highlighting-enabled",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 
@@ -139,7 +109,7 @@ thunar_text_renderer_class_init (ThunarTextRendererClass *klass)
 static void
 thunar_text_renderer_init (ThunarTextRenderer *text_renderer)
 {
-  text_renderer->highlight_color = NULL;
+  text_renderer->file = NULL;
 }
 
 
@@ -149,7 +119,8 @@ thunar_text_renderer_finalize (GObject *object)
 {
   ThunarTextRenderer *text_renderer = THUNAR_TEXT_RENDERER (object);
 
-  g_free (text_renderer->highlight_color);
+  if (G_LIKELY (text_renderer->file != NULL))
+    g_object_unref (G_OBJECT (text_renderer->file));
 
   G_OBJECT_CLASS (thunar_text_renderer_parent_class)->finalize (object);
 }
@@ -166,16 +137,8 @@ thunar_text_renderer_get_property (GObject    *object,
 
   switch (prop_id)
     {
-    case PROP_HIGHLIGHT_COLOR:
-      g_value_set_string (value, text_renderer->highlight_color);
-      break;
-
-    case PROP_ROUNDED_CORNERS:
-      g_value_set_boolean (value, text_renderer->rounded_corners);
-      break;
-
-    case PROP_HIGHLIGHTING_ENABLED:
-      g_value_set_boolean (value, text_renderer->highlighting_enabled);
+    case PROP_FILE:
+      g_value_set_object (value, text_renderer->file);
       break;
 
     default:
@@ -196,17 +159,10 @@ thunar_text_renderer_set_property (GObject      *object,
 
   switch (prop_id)
     {
-    case PROP_HIGHLIGHT_COLOR:
-      g_free (text_renderer->highlight_color);
-      text_renderer->highlight_color = g_value_dup_string (value);
-      break;
-
-    case PROP_ROUNDED_CORNERS:
-      text_renderer->rounded_corners = g_value_get_boolean (value);
-      break;
-
-    case PROP_HIGHLIGHTING_ENABLED:
-      text_renderer->highlighting_enabled = g_value_get_boolean (value);
+    case PROP_FILE:
+      if (G_LIKELY (text_renderer->file != NULL))
+        g_object_unref (G_OBJECT (text_renderer->file));
+      text_renderer->file = (gpointer) g_value_dup_object (value);
       break;
 
     default:
@@ -243,8 +199,22 @@ thunar_text_renderer_render (GtkCellRenderer     *cell,
                              const GdkRectangle  *cell_area,
                              GtkCellRendererState flags)
 {
-  if (THUNAR_TEXT_RENDERER (cell)->highlighting_enabled)
-    thunar_util_clip_view_background (cell, cr, background_area, widget, flags);
+  ThunarTextRenderer *text_renderer = THUNAR_TEXT_RENDERER (cell);
+  GtkStyleContext    *context;
+  GtkCssProvider     *provider;
+
+  if (G_LIKELY (text_renderer->file != NULL))
+    {
+      provider = thunar_file_get_highlight_css_provider (text_renderer->file);
+      if (G_UNLIKELY (provider != NULL))
+        {
+          context = gtk_widget_get_style_context (widget);
+          gtk_style_context_save (context);
+          gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+          gtk_render_background (context, cr, background_area->x, background_area->y, background_area->width, background_area->height);
+          gtk_style_context_restore (context);
+        }
+    }
 
   /* we only needed to manipulate the background_area, otherwise everything remains the same.
      Hence, we are simply running the original render function now */

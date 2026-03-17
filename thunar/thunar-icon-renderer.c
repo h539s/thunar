@@ -37,9 +37,6 @@ enum
   PROP_EMBLEMS,
   PROP_FOLLOW_STATE,
   PROP_SIZE,
-  PROP_HIGHLIGHT_COLOR,
-  PROP_ROUNDED_CORNERS,
-  PROP_HIGHLIGHTING_ENABLED,
   PROP_USE_SYMBOLIC_ICONS,
 };
 
@@ -167,44 +164,6 @@ thunar_icon_renderer_class_init (ThunarIconRendererClass *klass)
 
 
   /**
-   * ThunarIconRenderer:highlight-color:
-   *
-   * The color with which the cell should be highlighted.
-   **/
-  g_object_class_install_property (gobject_class,
-                                   PROP_HIGHLIGHT_COLOR,
-                                   g_param_spec_string ("highlight-color", "highlight-color", "highlight-color",
-                                                        NULL,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-
-
-  /**
-   * ThunarIconRenderer:rounded-corners:
-   *
-   * Determines if the cell should be clipped to rounded-corners.
-   * Useful when highlighting is enabled & a highlight color is set.
-   **/
-  g_object_class_install_property (gobject_class,
-                                   PROP_ROUNDED_CORNERS,
-                                   g_param_spec_boolean ("rounded-corners", "rounded-corners", "rounded-corners",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-
-
-  /**
-   * ThunarIconRenderer:highlighting-enabled:
-   *
-   * Determines if the cell background should be drawn with highlight color.
-   **/
-  g_object_class_install_property (gobject_class,
-                                   PROP_HIGHLIGHTING_ENABLED,
-                                   g_param_spec_boolean ("highlighting-enabled", "highlighting-enabled", "highlighting-enabled",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-  /**
    * ThunarIconRenderer:use_symbolic_icons:
    *
    * Whether to use symbolic icons.
@@ -239,7 +198,6 @@ thunar_icon_renderer_finalize (GObject *object)
     g_object_unref (G_OBJECT (icon_renderer->drop_file));
   if (G_LIKELY (icon_renderer->file != NULL))
     g_object_unref (G_OBJECT (icon_renderer->file));
-  g_free (icon_renderer->highlight_color);
 
   (*G_OBJECT_CLASS (thunar_icon_renderer_parent_class)->finalize) (object);
 }
@@ -274,18 +232,6 @@ thunar_icon_renderer_get_property (GObject    *object,
 
     case PROP_SIZE:
       g_value_set_enum (value, icon_renderer->size);
-      break;
-
-    case PROP_HIGHLIGHT_COLOR:
-      g_value_set_string (value, icon_renderer->highlight_color);
-      break;
-
-    case PROP_ROUNDED_CORNERS:
-      g_value_set_boolean (value, icon_renderer->rounded_corners);
-      break;
-
-    case PROP_HIGHLIGHTING_ENABLED:
-      g_value_set_boolean (value, icon_renderer->highlighting_enabled);
       break;
 
     case PROP_USE_SYMBOLIC_ICONS:
@@ -332,19 +278,6 @@ thunar_icon_renderer_set_property (GObject      *object,
 
     case PROP_SIZE:
       icon_renderer->size = g_value_get_enum (value);
-      break;
-
-    case PROP_HIGHLIGHT_COLOR:
-      g_free (icon_renderer->highlight_color);
-      icon_renderer->highlight_color = g_value_dup_string (value);
-      break;
-
-    case PROP_ROUNDED_CORNERS:
-      icon_renderer->rounded_corners = g_value_get_boolean (value);
-      break;
-
-    case PROP_HIGHLIGHTING_ENABLED:
-      icon_renderer->highlighting_enabled = g_value_get_boolean (value);
       break;
 
     case PROP_USE_SYMBOLIC_ICONS:
@@ -503,10 +436,20 @@ thunar_icon_renderer_render (GtkCellRenderer     *renderer,
   if (G_UNLIKELY (!gdk_cairo_get_clip_rectangle (cr, &clip_area)))
     return;
 
-  g_object_get (renderer, "is-expanded", &is_expanded, NULL);
+  if (G_LIKELY (icon_renderer->file != NULL))
+    {
+      GtkCssProvider *provider = thunar_file_get_highlight_css_provider (icon_renderer->file);
+      if (G_UNLIKELY (provider != NULL))
+        {
+          context = gtk_widget_get_style_context (widget);
+          gtk_style_context_save (context);
+          gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+          gtk_render_background (context, cr, background_area->x, background_area->y, background_area->width, background_area->height);
+          gtk_style_context_restore (context);
+        }
+    }
 
-  if (THUNAR_ICON_RENDERER (renderer)->highlighting_enabled)
-    thunar_util_clip_view_background (renderer, cr, background_area, widget, flags);
+  g_object_get (renderer, "is-expanded", &is_expanded, NULL);
 
   /* determine the icon state */
   icon_state = (icon_renderer->drop_file != icon_renderer->file)

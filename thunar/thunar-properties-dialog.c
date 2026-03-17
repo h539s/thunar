@@ -1557,8 +1557,8 @@ thunar_properties_dialog_update_single (ThunarPropertiesDialog *dialog)
 
   if (dialog->show_file_highlight_tab && G_LIKELY (thunar_g_vfs_metadata_is_supported ()))
     {
-      background = thunar_file_get_metadata_setting (file, "highlight-color-background");
-      foreground = thunar_file_get_metadata_setting (file, "highlight-color-foreground");
+      background = thunar_file_get_metadata_setting (file, "thunar-highlight-color-background");
+      foreground = thunar_file_get_metadata_setting (file, "thunar-highlight-color-foreground");
       thunar_properties_dialog_colorize_example_box (dialog, background, foreground);
       g_free (foreground);
       g_free (background);

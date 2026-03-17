@@ -28,8 +28,6 @@
 
 G_BEGIN_DECLS;
 
-#define ALPHA_BACKDROP 0.5
-#define ALPHA_FOCUSED 1.0
 
 /* if we need an array of size greater
  * than this threshold; we'll use heap */
@@ -105,12 +103,6 @@ thunar_util_is_a_search_query (const gchar *string);
 gchar *
 thunar_util_strjoin_list (GList       *string_list,
                           const gchar *separator);
-void
-thunar_util_clip_view_background (GtkCellRenderer     *cell,
-                                  cairo_t             *cr,
-                                  const GdkRectangle  *background_area,
-                                  GtkWidget           *widget,
-                                  GtkCellRendererState flags);
 gchar **
 thunar_util_split_search_query (const gchar *search_query_normalized,
                                 GError     **error);

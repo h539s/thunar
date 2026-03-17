@@ -494,6 +494,9 @@ thunar_file_update_thumbnail (ThunarFile          *file,
 void
 thunar_file_changed (ThunarFile *file);
 
+GtkCssProvider *
+thunar_file_get_highlight_css_provider (ThunarFile *file);
+
 /**
  * thunar_file_is_root:
  * @file : a #ThunarFile.

@@ -240,6 +240,10 @@ struct _ThunarFile
    * there were > 10.000 files in a folder (Creation of #ThunarFolder seems to be slow) */
   guint   file_count;
   guint64 file_count_timestamp;
+
+  gchar          *highlight_background;
+  gchar          *highlight_foreground;
+  GtkCssProvider *highlight_css_provider;
 };
 
 typedef struct
@@ -456,6 +460,9 @@ thunar_file_init (ThunarFile *file)
   file->file_count_timestamp = 0;
   file->display_name = NULL;
   file->is_thumbnail = FALSE;
+  file->highlight_background = NULL;
+  file->highlight_foreground = NULL;
+  file->highlight_css_provider = NULL;
   for (gint i = 0; i < N_THUMBNAIL_SIZES; i++)
     thunar_file_reset_thumbnail (file, i);
 
@@ -566,6 +573,12 @@ thunar_file_finalize (GObject *object)
 
   /* release file */
   g_object_unref (file->gfile);
+
+  if (file->highlight_css_provider != NULL)
+    g_object_unref (file->highlight_css_provider);
+
+  g_free (file->highlight_background);
+  g_free (file->highlight_foreground);
 
   (*G_OBJECT_CLASS (thunar_file_parent_class)->finalize) (object);
 }
@@ -5538,4 +5551,92 @@ thunar_file_changed (ThunarFile *file)
   /* start a timer to throttle consecutive calls */
   file->signal_changed_source_id = g_timeout_add (FILE_CHANGED_SIGNAL_RATE_LIMIT,
                                                   thunar_file_changed_signal_timeout, file);
+}
+
+/**
+ * thunar_file_get_highlight_css_provider:
+ * @file : a #ThunarFile instance.
+ *
+ * Returns the #GtkCssProvider for @file if it has highlight colors set.
+ *
+ * Return value: (transfer none) (nullable): the #GtkCssProvider for @file or %NULL.
+ **/
+GtkCssProvider *
+thunar_file_get_highlight_css_provider (ThunarFile *file)
+{
+  gchar  *background;
+  gchar  *foreground;
+  GString *css_data;
+  GdkRGBA  bg_rgba, fg_rgba;
+
+  _thunar_return_val_if_fail (THUNAR_IS_FILE (file), NULL);
+
+  background = thunar_file_get_metadata_setting (file, "thunar-highlight-color-background");
+  foreground = thunar_file_get_metadata_setting (file, "thunar-highlight-color-foreground");
+
+  if (background == NULL && foreground == NULL)
+    {
+      if (file->highlight_css_provider != NULL)
+        {
+          g_object_unref (file->highlight_css_provider);
+          file->highlight_css_provider = NULL;
+        }
+      g_free (file->highlight_background);
+      file->highlight_background = NULL;
+      g_free (file->highlight_foreground);
+      file->highlight_foreground = NULL;
+      return NULL;
+    }
+
+  if (g_strcmp0 (background, file->highlight_background) == 0
+      && g_strcmp0 (foreground, file->highlight_foreground) == 0
+      && file->highlight_css_provider != NULL)
+    {
+      g_free (background);
+      g_free (foreground);
+      return file->highlight_css_provider;
+    }
+
+  g_free (file->highlight_background);
+  file->highlight_background = background;
+  g_free (file->highlight_foreground);
+  file->highlight_foreground = foreground;
+
+  if (file->highlight_css_provider == NULL)
+    file->highlight_css_provider = gtk_css_provider_new ();
+
+  css_data = g_string_new ("");
+
+  if (file->highlight_background != NULL && gdk_rgba_parse (&bg_rgba, file->highlight_background))
+    {
+      gchar *s1 = gdk_rgba_to_string (&bg_rgba);
+      bg_rgba.alpha *= 0.5;
+      gchar *s2 = gdk_rgba_to_string (&bg_rgba);
+
+      g_string_append_printf (css_data,
+                              "* { background-color: %s; }\n"
+                              "*:backdrop { background-color: %s; }\n",
+                              s1, s2);
+      g_free (s1);
+      g_free (s2);
+    }
+
+  if (file->highlight_foreground != NULL && gdk_rgba_parse (&fg_rgba, file->highlight_foreground))
+    {
+      gchar *s1 = gdk_rgba_to_string (&fg_rgba);
+      fg_rgba.alpha *= 0.5;
+      gchar *s2 = gdk_rgba_to_string (&fg_rgba);
+
+      g_string_append_printf (css_data,
+                              "* { color: %s; }\n"
+                              "*:backdrop { color: %s; }\n",
+                              s1, s2);
+      g_free (s1);
+      g_free (s2);
+    }
+
+  gtk_css_provider_load_from_data (file->highlight_css_provider, css_data->str, -1, NULL);
+  g_string_free (css_data, TRUE);
+
+  return file->highlight_css_provider;
 }

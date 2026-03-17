@@ -475,10 +475,6 @@ struct _ThunarStandardViewPrivate
   /* used to restore the view type after a search is completed */
   GType type;
 
-  /* The css_provider is added to or removed from the style_context of the view
-   * using @gtk_style_context_add/remove_provider.
-   * Thus we need to maintain the reference. */
-  GtkCssProvider *css_provider;
 
   GType model_type;
 
@@ -1021,7 +1017,6 @@ thunar_standard_view_init (ThunarStandardView *standard_view)
   standard_view->icon_renderer = thunar_icon_renderer_new ();
   g_object_ref_sink (G_OBJECT (standard_view->icon_renderer));
   g_object_bind_property (G_OBJECT (standard_view), "zoom-level", G_OBJECT (standard_view->icon_renderer), "size", G_BINDING_SYNC_CREATE);
-  g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-highlighting-enabled", G_OBJECT (standard_view->icon_renderer), "highlighting-enabled", G_BINDING_SYNC_CREATE);
   g_signal_connect (G_OBJECT (standard_view), "notify::scale-factor", G_CALLBACK (thunar_standard_view_scale_changed), NULL);
 
   /* setup the name renderer */
@@ -1034,10 +1029,6 @@ thunar_standard_view_init (ThunarStandardView *standard_view)
                 "xalign", 0.5,
                 NULL);
   g_object_ref_sink (G_OBJECT (standard_view->name_renderer));
-  g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-highlighting-enabled", G_OBJECT (standard_view->name_renderer), "highlighting-enabled", G_BINDING_SYNC_CREATE);
-
-  /* this is required in order to disable foreground & background colors on the text renderers when the feature is disabled */
-  g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-highlighting-enabled", G_OBJECT (standard_view->name_renderer), "foreground-set", G_BINDING_SYNC_CREATE);
 
   /* TODO: prelit underline
   g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-single-click", G_OBJECT (standard_view->name_renderer), "follow-prelit", G_BINDING_SYNC_CREATE);*/
@@ -1050,8 +1041,6 @@ thunar_standard_view_init (ThunarStandardView *standard_view)
   standard_view->priv->search_query = NULL;
   standard_view->priv->searching = FALSE;
   standard_view->priv->type = 0;
-
-  standard_view->priv->css_provider = NULL;
 
   g_mutex_init (&standard_view->priv->statusbar_text_mutex);
 }
@@ -1162,8 +1151,6 @@ thunar_standard_view_constructed (GObject *object)
   g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-case-sensitive", G_OBJECT (standard_view->model), "case-sensitive", G_BINDING_SYNC_CREATE);
   g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-date-style", G_OBJECT (standard_view->model), "date-style", G_BINDING_SYNC_CREATE);
   g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-date-custom-style", G_OBJECT (standard_view->model), "date-custom-style", G_BINDING_SYNC_CREATE);
-  g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-hidden-last", G_OBJECT (standard_view->model), "hidden-last", G_BINDING_SYNC_CREATE);
-  g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-file-size-binary", G_OBJECT (standard_view->model), "file-size-binary", G_BINDING_SYNC_CREATE);
   g_object_bind_property (G_OBJECT (standard_view->preferences), "misc-folder-item-count", G_OBJECT (standard_view->model), "folder-item-count", G_BINDING_SYNC_CREATE);
 
   /* be sure to update the selection whenever the folder changes */
@@ -1285,9 +1272,6 @@ thunar_standard_view_finalize (GObject *object)
   if (G_UNLIKELY (standard_view->priv->scroll_to_file != NULL))
     g_object_unref (G_OBJECT (standard_view->priv->scroll_to_file));
 
-  /* release css_provider */
-  if (G_UNLIKELY (standard_view->priv->css_provider != NULL))
-    g_object_unref (G_OBJECT (standard_view->priv->css_provider));
 
   /* release the selected_files list and the files to select (if any) */
   thunar_g_list_free_full (standard_view->priv->selected_files);
@@ -5051,7 +5035,6 @@ thunar_standard_view_highlight_option_changed (ThunarStandardView *standard_view
   GtkCellLayout        *layout = NULL;
   GtkCellLayoutDataFunc function = NULL;
   gboolean              show_highlight;
-  GtkStyleContext      *context = gtk_widget_get_style_context (view);
 
   if (GTK_IS_TREE_VIEW (view))
     layout = GTK_CELL_LAYOUT (gtk_tree_view_get_column (GTK_TREE_VIEW (view), THUNAR_COLUMN_NAME));
@@ -5063,31 +5046,14 @@ thunar_standard_view_highlight_option_changed (ThunarStandardView *standard_view
   if (show_highlight)
     function = (GtkCellLayoutDataFunc) THUNAR_STANDARD_VIEW_GET_CLASS (standard_view)->cell_layout_data_func;
 
-  if (standard_view->priv->css_provider == NULL)
-    {
-      standard_view->priv->css_provider = gtk_css_provider_new ();
-      gtk_css_provider_load_from_data (
-      standard_view->priv->css_provider,
-      ".standard-view .view:selected { background-color: rgba(0,0,0,0); outline: rgba(0,0,0,0); }",
-      -1, NULL);
-    }
-
-  /* if highlighting is enabled; add our custom css. */
-  if (show_highlight)
-    gtk_style_context_add_provider (
-    context,
-    GTK_STYLE_PROVIDER (standard_view->priv->css_provider),
-    GTK_STYLE_PROVIDER_PRIORITY_USER);
-  /* if highlighting is disabled; drop our custom css */
-  else
-    gtk_style_context_remove_provider (context, GTK_STYLE_PROVIDER (standard_view->priv->css_provider));
-
   gtk_cell_layout_set_cell_data_func (layout,
                                       standard_view->icon_renderer,
                                       function, standard_view, NULL);
   gtk_cell_layout_set_cell_data_func (layout,
                                       standard_view->name_renderer,
                                       function, standard_view, NULL);
+
+  gtk_widget_queue_draw (view);
 }
 
 
@@ -5100,59 +5066,46 @@ thunar_standard_view_cell_layout_data_func (GtkCellLayout   *layout,
                                             gpointer         data)
 {
   ThunarFile *file = THUNAR_FILE (thunar_tree_view_model_get_file (THUNAR_TREE_VIEW_MODEL (model), iter));
-  gchar      *background = NULL;
-  gchar      *foreground = NULL;
-  GdkRGBA     foreground_rgba;
-  GtkWidget  *view = GTK_WIDGET (data);
-  GtkWidget  *toplevel;
 
   if (file == NULL)
     return;
 
-  background = thunar_file_get_metadata_setting (file, "thunar-highlight-color-background");
-  foreground = thunar_file_get_metadata_setting (file, "thunar-highlight-color-foreground");
-
-  if (foreground != NULL)
-    gdk_rgba_parse (&foreground_rgba, foreground);
-  foreground_rgba.alpha = ALPHA_FOCUSED;
-
-  /* check the state of our window (active/backdrop) */
-  if (GTK_IS_WIDGET (view))
-    {
-      toplevel = gtk_widget_get_toplevel (view);
-      if (GTK_IS_WINDOW (toplevel) && !gtk_window_is_active (GTK_WINDOW (toplevel)))
-        foreground_rgba.alpha = ALPHA_BACKDROP;
-    }
-
   /* since this function is being used for both icon & name renderers;
    * we need to make sure the right properties are applied to the right renderers */
   if (THUNAR_IS_TEXT_RENDERER (cell))
-    g_object_set (G_OBJECT (cell),
-                  "foreground-rgba", foreground != NULL ? &foreground_rgba : NULL,
-                  "highlight-color", background,
-                  NULL);
+    g_object_set (G_OBJECT (cell), "file", file, NULL);
 
   else if (THUNAR_IS_ICON_RENDERER (cell))
-    g_object_set (G_OBJECT (cell),
-                  "highlight-color", background,
-                  NULL);
+    g_object_set (G_OBJECT (cell), "file", file, NULL);
 
   else if (GTK_IS_CELL_RENDERER_TEXT (cell))
-    g_object_set (G_OBJECT (cell),
-                  "foreground-rgba", foreground != NULL ? &foreground_rgba : NULL,
-                  "background", background,
-                  NULL);
+    {
+      gchar  *background = thunar_file_get_metadata_setting (file, "thunar-highlight-color-background");
+      gchar  *foreground = thunar_file_get_metadata_setting (file, "thunar-highlight-color-foreground");
+      GdkRGBA foreground_rgba;
+
+      if (foreground != NULL)
+        gdk_rgba_parse (&foreground_rgba, foreground);
+      foreground_rgba.alpha = 1.0;
+
+      g_object_set (G_OBJECT (cell),
+                    "foreground-rgba", foreground != NULL ? &foreground_rgba : NULL,
+                    "background", background,
+                    NULL);
+      g_free (background);
+      g_free (foreground);
+    }
 
   else if (GTK_IS_CELL_RENDERER (cell))
-    g_object_set (G_OBJECT (cell),
-                  "cell-background", background,
-                  NULL);
+    {
+      gchar *background = thunar_file_get_metadata_setting (file, "thunar-highlight-color-background");
+      g_object_set (G_OBJECT (cell), "cell-background", background, NULL);
+      g_free (background);
+    }
 
   else
     g_warn_if_reached ();
 
-  g_free (foreground);
-  g_free (background);
   g_object_unref (file);
 }
 
