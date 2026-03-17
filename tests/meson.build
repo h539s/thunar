@@ -1,5 +1,6 @@
 test_bins = [
   'test-resolve-symlink',
+  'test-tree-view',
 ]
 
 foreach bin : test_bins
