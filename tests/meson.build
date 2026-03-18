@@ -14,8 +14,8 @@ test_cases = [
   'file-menu',
 ]
 
-xvfb_run = find_program('xvfb-run', required: false)
-dbus_run_session = find_program('dbus-run-session', required: false)
+xvfb_run = find_program('xvfb-run', required: true)
+dbus_run_session = find_program('dbus-run-session', required: true)
 sh = find_program('sh', required: true)
 
 # Base environment variables
@@ -62,6 +62,7 @@ foreach tc : test_cases
         'mkdir -p /tmp/empty_gio && ' + xvfb_run.full_path() + ' --auto-servernum -s "-screen 0 800x600x24" ' + dbus_run_session.full_path() + ' -- ' + e.full_path()
       ],
       env: x11_env,
+	  depends: e,
       timeout: 60,
       suite: 'snapshots',
     )
