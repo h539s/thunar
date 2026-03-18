@@ -31,6 +31,8 @@ base_test_env = {
   'GIO_USE_VOLUME_MONITOR': 'unix',
   'GIO_EXTRA_MODULES': '/tmp/empty_gio',
   'G_TEST_SRCDIR': meson.current_source_dir(),
+  'GDK_BACKEND': 'x11',
+  'WAYLAND_DISPLAY': '',
 }
 
 foreach tc : test_cases
