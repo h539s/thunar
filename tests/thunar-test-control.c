@@ -1,4 +1,6 @@
 #include "tests/thunar-test-control.h"
+#include "tests/thunar-test-snapshots.h"
+#include "thunar/thunar-preferences.h"
 #include <string.h>
 
 void
@@ -30,3 +32,4 @@ find_file_menu_and_click (GtkWidget *widget, gpointer data)
   if (GTK_IS_CONTAINER (widget))
     gtk_container_foreach (GTK_CONTAINER (widget), find_file_menu_and_click, data);
 }
+

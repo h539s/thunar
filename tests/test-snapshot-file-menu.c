@@ -1,4 +1,3 @@
-#include "thunar-test-utils.h"
 #include "tests/thunar-test-snapshots.h"
 #include "tests/thunar-test-control.h"
 #include "thunar/thunar-preferences.h"

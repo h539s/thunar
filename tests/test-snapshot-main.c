@@ -11,7 +11,7 @@
 #include "thunar/thunar-preferences.h"
 #include "thunar/thunar-private.h"
 #include "thunar/thunar-session-client.h"
-#include "thunar-test-utils.h"
+#include "thunar-test-control.h"
 
 #ifdef THUNAR_JOB_CONTROL
 #include "tests/thunar-job-control.h"
