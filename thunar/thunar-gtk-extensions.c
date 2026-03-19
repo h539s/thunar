@@ -234,7 +234,53 @@ thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
       device = gdk_event_get_device (event);
 
       if (device != NULL && gdk_device_get_source (device) == GDK_SOURCE_KEYBOARD)
-        device = gdk_device_get_associated_device (device);
+        {
+          GtkWidget *event_widget = gtk_get_event_widget (event);
+          GtkWidget *focus_widget = NULL;
+          if (event_widget != NULL)
+            {
+              GtkWidget *toplevel = gtk_widget_get_toplevel (event_widget);
+
+              if (GTK_IS_WINDOW (toplevel))
+                {
+                  focus_widget = gtk_window_get_focus (GTK_WINDOW (toplevel));
+                  if (focus_widget != NULL)
+                    {
+                      if (GTK_IS_TREE_VIEW (focus_widget))
+                        {
+                          GtkTreeView       *tree = GTK_TREE_VIEW (focus_widget);
+                          GtkTreePath       *path;
+                          GtkTreeViewColumn *column;
+
+                          gtk_tree_view_get_cursor (tree, &path, &column);
+                          if (path)
+                            {
+                              gtk_tree_view_get_cell_area (tree, path, column, &rect);
+                              GdkWindow *bin_window = gtk_tree_view_get_bin_window (tree);
+                              gtk_tree_path_free (path);
+                              gtk_menu_popup_at_rect (menu,
+                                                      bin_window,
+                                                      &rect,
+                                                      GDK_GRAVITY_SOUTH_WEST,
+                                                      GDK_GRAVITY_NORTH_WEST,
+                                                      event);
+                            }
+                        }
+                      else
+                        {
+                          gtk_menu_popup_at_widget (menu,
+                                                    focus_widget,
+                                                    GDK_GRAVITY_SOUTH_WEST,
+                                                    GDK_GRAVITY_NORTH_WEST,
+                                                    event);
+                        }
+                      return;
+                    }
+                }
+            }
+
+          device = gdk_device_get_associated_device (device);
+        }
 
       if (device != NULL)
         {
