@@ -5,10 +5,11 @@
 
 G_BEGIN_DECLS
 
-void thunar_test_setup_window (GtkWindow *window);
-void find_file_menu_and_click (GtkWidget *widget, gpointer data);
-void find_tree_view (GtkWidget *widget, gpointer data);
-gboolean thunar_test_run (gpointer data);
+void     thunar_test_setup_window (GtkWindow *window);
+void     find_file_menu_and_click (GtkWidget *widget, gpointer data);
+void     find_tree_view           (GtkWidget *widget, gpointer data);
+gboolean thunar_run_test          (GtkWindow *window, gint step);
+const gchar* thunar_test_get_name (void);
 
 G_END_DECLS
 

@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <glib/gstdio.h>
@@ -12,16 +11,36 @@
 #include "thunar/thunar-private.h"
 #include "thunar/thunar-session-client.h"
 #include "thunar-test-control.h"
-
-#ifdef THUNAR_JOB_CONTROL
+#include "thunar-test-snapshots.h"
 #include "tests/thunar-job-control.h"
+
+static GtkWindow *test_window = NULL;
+static gint       test_step = 0;
 
 static void
 job_control_ready (void)
 {
-  g_print ("Job control: all jobs finished, proceeding with test...\n");
+  if (test_window == NULL)
+    return;
+
+  if (!gtk_widget_get_visible (GTK_WIDGET (test_window)))
+    return;
+
+  if (gtk_widget_get_window (GTK_WIDGET (test_window)) == NULL)
+    return;
+
+  g_print ("Job control: all jobs finished, executing step %d...\n", test_step);
+  
+  if (thunar_run_test (test_window, test_step))
+    {
+      test_step++;
+    }
+  else
+    {
+      /* No more steps, take snapshot */
+      take_snapshot_and_compare (test_window, thunar_test_get_name ());
+    }
 }
-#endif
 
 static void
 window_added (GtkApplication *app,
@@ -32,7 +51,8 @@ window_added (GtkApplication *app,
   if (!test_started)
     {
       test_started = TRUE;
-      g_idle_add (thunar_test_run, window);
+      test_window = window;
+      gtk_window_maximize (window);
     }
 }
 
@@ -64,9 +84,7 @@ main (int argc, char **argv)
   /* acquire a reference on the global application */
   application = thunar_application_get ();
 
-#ifdef THUNAR_JOB_CONTROL
   thunar_job_control_set_callback (job_control_ready);
-#endif
 
   g_signal_connect (application, "window-added", G_CALLBACK (window_added), NULL);
 
