@@ -54,7 +54,13 @@ thunar_job_control_idle (gpointer data)
   if (control->jobs_count == 0)
     {
       if (control->callback != NULL)
+	  {
+		  while (gtk_events_pending())
+		  {
+			gtk_main_iteration();
+		  }
         control->callback ();
+	  }
       
       control->idle_id = 0;
       return FALSE; /* Remove from idle */
@@ -97,7 +103,7 @@ thunar_job_control_decrement (void)
 
   if (global_control->jobs_count == 0 && global_control->idle_id == 0)
     {
-      global_control->idle_id = g_idle_add (thunar_job_control_idle, global_control);
+      global_control->idle_id = g_idle_add_full (G_PRIORITY_LOW, thunar_job_control_idle, global_control, NULL);
     }
 }
 
@@ -117,7 +123,7 @@ thunar_job_control_set_callback (void (*callback) (void))
   
   /* If we already have 0 jobs, trigger idle check */
   if (global_control->jobs_count == 0 && global_control->idle_id == 0)
-    global_control->idle_id = g_idle_add (thunar_job_control_idle, global_control);
+    global_control->idle_id = g_idle_add_full (G_PRIORITY_LOW, thunar_job_control_idle, global_control, NULL);
 }
 
 #endif /* THUNAR_JOB_CONTROL */

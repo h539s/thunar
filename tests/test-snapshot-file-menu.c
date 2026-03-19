@@ -18,7 +18,6 @@ thunar_run_test (GtkWindow *window, gint step)
   switch (step)
     {
     case 0:
-      thunar_test_setup_window (window);
       /* Standardize the view: ensure the menubar is visible */
       g_object_set (thunar_preferences_get (), "last-menubar-visible", TRUE, NULL);
       return TRUE;

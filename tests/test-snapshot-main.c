@@ -52,7 +52,13 @@ window_added (GtkApplication *app,
     {
       test_started = TRUE;
       test_window = window;
-      gtk_window_maximize (window);
+
+      /* In environments without a window manager (like Xvfb), gtk_window_maximize ()
+       * only sets a hint but doesn't resize the window. We manually set the size
+       * to match the screen to ensure it is effectively maximized. */
+      gtk_window_unmaximize (window);
+      gtk_window_resize (window, 800, 600);
+      gtk_window_move (window, 0, 0);
     }
 }
 

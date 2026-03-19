@@ -12,7 +12,6 @@ thunar_run_test (GtkWindow *window, gint step)
 {
   if (step == 0)
     {
-      thunar_test_setup_window (window);
       return TRUE;
     }
 

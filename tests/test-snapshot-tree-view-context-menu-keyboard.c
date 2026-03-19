@@ -20,7 +20,6 @@ thunar_run_test (GtkWindow *window, gint step)
   switch (step)
     {
     case 0:
-      thunar_test_setup_window (window);
       /* Standardize the view: ensure the tree pane is visible */
       g_object_set (thunar_preferences_get (), "last-side-pane", 1, NULL); // THUNAR_SIDEPANE_TYPE_TREE
       return TRUE;

@@ -5,12 +5,6 @@
 #include <string.h>
 
 void
-thunar_test_setup_window (GtkWindow *window)
-{
-  gtk_window_maximize (window);
-}
-
-void
 find_file_menu_and_click (GtkWidget *widget, gpointer data)
 {
   GtkWidget **file_menu_item = (GtkWidget **) data;
