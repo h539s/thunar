@@ -28,6 +28,7 @@
 
 #include <libxfce4ui/libxfce4ui.h>
 
+#include "thunar-standard-view.h"
 
 
 /**
@@ -266,8 +267,44 @@ thunar_gtk_menu_popup_at_pointer (GtkMenu  *menu,
                                                       event);
                             }
                         }
+                      else if (XFCE_IS_ICON_VIEW (focus_widget))
+                        {
+                          GList *selected_items;
+
+                          selected_items = xfce_icon_view_get_selected_items (XFCE_ICON_VIEW (focus_widget));
+
+                          if (selected_items != NULL)
+                            {
+                              GtkTreePath *path = (GtkTreePath *) selected_items->data;
+
+                              xfce_icon_view_get_cell_rect (GTK_ICON_VIEW (focus_widget), path, NULL, &rect);
+
+                              gtk_menu_popup_at_rect (menu,
+                                                      gtk_widget_get_window (focus_widget),
+                                                      &rect,
+                                                      GDK_GRAVITY_SOUTH_WEST,
+                                                      GDK_GRAVITY_NORTH_WEST,
+                                                      event);
+
+                              g_list_free_full (selected_items, (GDestroyNotify) gtk_tree_path_free);
+                            }
+                          else
+                            {
+                              gtk_widget_get_allocation (focus_widget, &rect);
+
+                              gtk_menu_popup_at_rect (menu,
+                                                      gtk_widget_get_window (focus_widget),
+                                                      &rect,
+                                                      GDK_GRAVITY_SOUTH_WEST,
+                                                      GDK_GRAVITY_NORTH_WEST,
+                                                      event);
+                            }
+                        }
                       else
                         {
+                          g_print("foscus_wiget is: %s\n", G_OBJECT_TYPE_NAME(focus_widget));
+                          g_print("event_wiget is: %s\n", G_OBJECT_TYPE_NAME(event_widget));
+
                           gtk_menu_popup_at_widget (menu,
                                                     focus_widget,
                                                     GDK_GRAVITY_SOUTH_WEST,
