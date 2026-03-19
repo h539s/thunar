@@ -12,6 +12,8 @@ test_snapshot_common_sources = [
 test_cases = [
   'open',
   'file-menu',
+  'tree-view-context-menu-mouse',
+  'tree-view-context-menu-keyboard',
 ]
 
 xvfb_run = find_program('xvfb-run', required: true)

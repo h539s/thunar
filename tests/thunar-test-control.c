@@ -1,6 +1,7 @@
 #include "tests/thunar-test-control.h"
 #include "tests/thunar-test-snapshots.h"
 #include "thunar/thunar-preferences.h"
+#include "thunar/thunar-tree-view.h"
 #include <string.h>
 
 void
@@ -31,5 +32,22 @@ find_file_menu_and_click (GtkWidget *widget, gpointer data)
 
   if (GTK_IS_CONTAINER (widget))
     gtk_container_foreach (GTK_CONTAINER (widget), find_file_menu_and_click, data);
+}
+
+void
+find_tree_view (GtkWidget *widget, gpointer data)
+{
+  GtkWidget **tree_view = (GtkWidget **) data;
+  if (*tree_view != NULL)
+    return;
+
+  if (THUNAR_IS_TREE_VIEW (widget))
+    {
+      *tree_view = widget;
+      return;
+    }
+
+  if (GTK_IS_CONTAINER (widget))
+    gtk_container_foreach (GTK_CONTAINER (widget), find_tree_view, data);
 }
 

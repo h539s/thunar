@@ -7,6 +7,7 @@ G_BEGIN_DECLS
 
 void thunar_test_setup_window (GtkWindow *window);
 void find_file_menu_and_click (GtkWidget *widget, gpointer data);
+void find_tree_view (GtkWidget *widget, gpointer data);
 gboolean thunar_test_run (gpointer data);
 
 G_END_DECLS
