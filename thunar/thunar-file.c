@@ -147,6 +147,10 @@ thunar_file_thumbnailing_finished (ThunarFile        *file,
 static void
 thunar_file_reset_thumbnail (ThunarFile         *file,
                              ThunarThumbnailSize size);
+static void
+thunar_file_reload_finish (GObject      *object,
+                           GAsyncResult *result,
+                           gpointer      user_data);
 
 
 
@@ -1338,20 +1342,16 @@ thunar_file_get (GFile   *gfile,
       file = g_object_new (THUNAR_TYPE_FILE, NULL);
       file->gfile = g_object_ref (gfile);
 
-      if (thunar_file_load (file, NULL, error))
-        {
-          /* Just check that it's been cached, if appropriate */
-          if (file->kind != G_FILE_TYPE_UNKNOWN)
-            _thunar_assert (g_hash_table_contains (file_cache, file->gfile) == TRUE);
-        }
-      else
-        {
-          /* failed loading, destroy the file */
-          g_object_unref (file);
+      /* (re)insert the file into the cache */
+      g_hash_table_insert (file_cache,
+                           g_object_ref (file->gfile),
+                           weak_ref_new (G_OBJECT (file)));
 
-          /* make sure we return NULL */
-          file = NULL;
-        }
+      /* update the file from the information we have (basically just the name) */
+      thunar_file_info_reload (file, NULL);
+
+      /* load the file information asynchronously */
+      thunar_file_reload (file);
     }
 
   /* finished related activity on the cache */
@@ -4422,6 +4422,61 @@ thunar_file_unwatch (ThunarFile *file)
 
 
 
+static void
+thunar_file_reload_finish (GObject      *object,
+                           GAsyncResult *result,
+                           gpointer      user_data)
+{
+  ThunarFile *file = THUNAR_FILE (user_data);
+  GFileInfo  *info;
+  GError     *error = NULL;
+
+  _thunar_return_if_fail (G_IS_FILE (object));
+  _thunar_return_if_fail (THUNAR_IS_FILE (file));
+
+  /* finish querying the file information */
+  info = g_file_query_info_finish (G_FILE (object), result, &error);
+
+  G_REC_LOCK (file_cache_mutex);
+
+  /* reset the file */
+  thunar_file_info_clear (file);
+
+  /* update the file with the new info */
+  file->info = info;
+
+  /* update the file from the information */
+  thunar_file_info_reload (file, NULL);
+
+  /* update the mounted info */
+  if (error != NULL
+      && error->domain == G_IO_ERROR
+      && error->code == G_IO_ERROR_NOT_MOUNTED)
+    {
+      FLAG_UNSET (file, THUNAR_FILE_FLAG_IS_MOUNTED);
+      g_clear_error (&error);
+    }
+
+  G_REC_UNLOCK (file_cache_mutex);
+
+  if (error != NULL)
+    {
+      /* send destroy signal for the file if we cannot query any file information */
+      if (error->domain != G_IO_ERROR || error->code != G_IO_ERROR_CANCELLED)
+        thunar_file_signal_destroy (file);
+      g_error_free (error);
+    }
+  else
+    {
+      /* ... and tell others */
+      thunar_file_changed (file);
+    }
+
+  g_object_unref (file);
+}
+
+
+
 /**
  * thunar_file_reload:
  * @file : a #ThunarFile instance.
@@ -4442,15 +4497,14 @@ thunar_file_reload (ThunarFile *file)
   /* clear file pxmap cache */
   thunar_icon_factory_clear_pixmap_cache (file);
 
-  if (!thunar_file_load (file, NULL, NULL))
-    {
-      /* send destroy signal for the file if we cannot query any file information */
-      thunar_file_signal_destroy (file);
-      return FALSE;
-    }
-
-  /* ... and tell others */
-  thunar_file_changed (file);
+  /* load the file information asynchronously */
+  g_file_query_info_async (file->gfile,
+                           THUNARX_FILE_INFO_NAMESPACE,
+                           G_FILE_QUERY_INFO_NONE,
+                           G_PRIORITY_DEFAULT,
+                           NULL,
+                           thunar_file_reload_finish,
+                           g_object_ref (file));
 
   return TRUE;
 }
